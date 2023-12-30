@@ -1,7 +1,18 @@
 <script>
 	import { Line } from 'svelte-chartjs';
-	import 'chart.js/auto';
+	import {
+		Chart as ChartJS,
+		Title,
+		Tooltip,
+		Legend,
+		LineElement,
+		LinearScale,
+		PointElement,
+		CategoryScale
+	} from 'chart.js';
+
 	import 'chartjs-adapter-date-fns';
+	import zoomPlugin from 'chartjs-plugin-zoom';
 
 	export let data;
 	export let avg5;
@@ -9,6 +20,16 @@
 	export let avg50;
 	export let avg100;
 	export let avg1000;
+	ChartJS.register(
+		zoomPlugin,
+		Title,
+		Tooltip,
+		Legend,
+		LineElement,
+		LinearScale,
+		PointElement,
+		CategoryScale
+	);
 
 	function formatTime(milliseconds) {
 		var hours = Math.floor(milliseconds / 3600000); // 1 hour = 3600000 milliseconds
@@ -35,7 +56,18 @@
 			maintainAspectRatio: false,
 			aspectRatio: 0.6, // Adjust this value to make the chart smaller or larger
 			plugins: {
-				tooltip: { enabled: false }
+				tooltip: { enabled: false },
+				zoom: {
+					zoom: {
+						wheel: {
+							enabled: true
+						},
+						pinch: {
+							enabled: true
+						},
+						mode: 'xy'
+					}
+				}
 			},
 			scales: {
 				x: {

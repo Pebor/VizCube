@@ -2,7 +2,6 @@ import { get } from 'svelte/store';
 import { db } from './store.js';
 
 export function querySimpleArray(query) {
-	console.log(query);
 	let stmt = get(db).prepare(query);
 
 	let queryResult = [];
