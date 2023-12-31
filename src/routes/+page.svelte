@@ -5,6 +5,7 @@
 	import Papa from 'papaparse';
 	import { db } from './../store.js';
 	import { query, querySimpleArray } from './../database.js';
+	import { formatTime } from './../utils.js';
 
 	let file;
 	let loading = false;
@@ -47,17 +48,23 @@
 					time int,
 					date datetime,
 					scramble text,
-					penalty smallint,
+					penalty tinyint,
 					avg5 int,
 					avg12 int,
 					avg50 int,
 					avg100 int,
-					avg1000 int
+					avg1000 int,
+					timePb boolean,
+					avg5Pb boolean,
+					avg12Pb boolean,
+					avg50Pb boolean,
+					avg100Pb boolean,
+					avg1000Pb boolean
 				);`;
 				$db.run(createTableQuery);
 
 				// Insert data into the table
-				const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, null, null, null, null, null)`;
+				const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
 				const stmt = $db.prepare(insertDataQuery);
 
 				for (let i = 1; i < results.data.length; i++) {
@@ -94,7 +101,9 @@
 						function calculateAverage(numElements) {
 							let tmp = [];
 							let count = 0,
-								sum = 0;
+								sum = 0,
+								lowest = Infinity;
+							let pb = false;
 
 							toWindows(timeValues, numElements).forEach((ar) => {
 								// Sort the array
@@ -109,9 +118,14 @@
 									sum += val;
 
 									if (idx == slicedArray.length - 1) {
+										pb = false;
 										count++;
 										let avg = sum / slicedArray.length;
-										tmp.push(avg);
+										if (avg < lowest) {
+											lowest = avg;
+											pb = true;
+										}
+										tmp.push({ avg, pb });
 										sum = 0;
 									}
 								});
@@ -119,7 +133,7 @@
 
 							// Add NULLs to the start of the array
 							for (let i = 0; i < numElements; i++) {
-								tmp.unshift(null);
+								tmp.unshift({ avg: null, pb: false });
 							}
 
 							return tmp;
@@ -131,20 +145,35 @@
 						avgs100 = calculateAverage(100);
 						avgs1000 = calculateAverage(1000);
 
-						const updateQuery = `UPDATE twisty SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ? where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}' and date is ?;`;
+						let lowest = Infinity;
+						timeValues = timeValues.map((val) => {
+							if (val < lowest) {
+								lowest = val;
+								return { time: val, pb: true };
+							}
+							return { time: val, pb: false };
+						});
+
+						const updateQuery = `UPDATE twisty SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ?, timePb = ?, avg5Pb = ?, avg12Pb = ?, avg50Pb = ?, avg100Pb = ?, avg1000Pb = ? where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}' and date is ?;`;
 						const new_stmt = $db.prepare(updateQuery);
 
 						// Start a transaction
 						$db.run('BEGIN TRANSACTION;');
 
-						timeValues.forEach((element, index) => {
+						dateValues.forEach((element, index) => {
 							new_stmt.run([
-								avgs5[index],
-								avgs12[index],
-								avgs50[index],
-								avgs100[index],
-								avgs1000[index],
-								dateValues[index]
+								avgs5[index].avg,
+								avgs12[index].avg,
+								avgs50[index].avg,
+								avgs100[index].avg,
+								avgs1000[index].avg,
+								timeValues[index].pb,
+								avgs5[index].pb,
+								avgs12[index].pb,
+								avgs50[index].pb,
+								avgs100[index].pb,
+								avgs1000[index].pb,
+								element
 							]);
 						});
 
@@ -154,6 +183,42 @@
 						new_stmt.free();
 					}
 				}
+
+				const entries = querySimpleArray('SELECT date FROM twisty');
+				let longestSession = [];
+				let longestSessionTime = 0;
+				let currentSession = [];
+				let currentSessionStart = null;
+				let previousDate = null;
+
+				entries.forEach((entry) => {
+					const currentDate = new Date(entry);
+
+					if (previousDate && currentDate - previousDate > 3600000) {
+						// More than 1 hour has passed since the last entry, start a new session
+						if (currentSession.length > longestSession.length) {
+							longestSession = currentSession;
+						}
+
+						currentSession = [entry];
+					} else {
+						// Less than 1 hour has passed since the last entry, continue the current session
+						currentSession.push(entry);
+					}
+
+					previousDate = currentDate;
+				});
+
+				// Check if the last session is the longest one
+				if (currentSession.length > longestSession.length) {
+					longestSession = currentSession;
+				}
+
+				console.log(
+					`Longest session has ${longestSession.length} entries and lasted ${formatTime(
+						Date.parse(longestSession[longestSession.length - 1]) - Date.parse(longestSession[0])
+					)}`
+				);
 
 				changeCategories();
 

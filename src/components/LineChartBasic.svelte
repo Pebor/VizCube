@@ -1,5 +1,6 @@
 <script>
 	import { Line } from 'svelte-chartjs';
+	import { formatTime } from './../utils.js';
 	import {
 		Chart as ChartJS,
 		Title,
@@ -10,7 +11,6 @@
 		PointElement,
 		CategoryScale
 	} from 'chart.js';
-
 	import 'chartjs-adapter-date-fns';
 	import zoomPlugin from 'chartjs-plugin-zoom';
 
@@ -21,32 +21,15 @@
 	export let avg100;
 	export let avg1000;
 	ChartJS.register(
-		zoomPlugin,
 		Title,
 		Tooltip,
 		Legend,
 		LineElement,
 		LinearScale,
 		PointElement,
-		CategoryScale
+		CategoryScale,
+		zoomPlugin
 	);
-
-	function formatTime(milliseconds) {
-		var hours = Math.floor(milliseconds / 3600000); // 1 hour = 3600000 milliseconds
-		var minutes = Math.floor((milliseconds % 3600000) / 60000); // 1 minute = 60000 milliseconds
-		var seconds = Math.floor((milliseconds % 60000) / 1000); // 1 second = 1000 milliseconds
-
-		var timeString = '';
-		if (hours > 0) {
-			timeString += hours.toString() + 'h ';
-		}
-		if (minutes > 0) {
-			timeString += minutes.toString() + 'm ';
-		}
-		timeString += seconds.toString().padStart(2, '0') + 's';
-
-		return timeString;
-	}
 </script>
 
 <div style="width: 70vw;">
