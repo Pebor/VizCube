@@ -49,6 +49,7 @@
 					date datetime,
 					scramble text,
 					penalty tinyint,
+					comm text,
 					avg5 int,
 					avg12 int,
 					avg50 int,
@@ -64,7 +65,7 @@
 				$db.run(createTableQuery);
 
 				// Insert data into the table
-				const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
+				const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
 				const stmt = $db.prepare(insertDataQuery);
 
 				for (let i = 1; i < results.data.length; i++) {
@@ -72,8 +73,9 @@
 
 					if (data[0] !== '') {
 						data[3] = data[3] / 1000;
+						data[6] = data[6] === '' ? null : data[6];
 
-						stmt.run(data.slice(0, 6));
+						stmt.run(data);
 					}
 				}
 
