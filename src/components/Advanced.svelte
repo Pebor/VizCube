@@ -1,5 +1,6 @@
 <script>
 	import { query } from './../database.js';
+	import { formatTime } from './../utils.js';
 
 	let queryData = [];
 	let error = null;
@@ -9,6 +10,8 @@
 		error = null;
 		try {
 			queryData = query(textareaValue);
+			if (queryData.time) {
+			}
 		} catch (err) {
 			error = err.message;
 		}
@@ -51,8 +54,10 @@
 				<tbody>
 					{#each queryData as row}
 						<tr>
-							{#each Object.values(row) as value}
-								<td class="border border-gray-300 py-2 px-4">{value}</td>
+							{#each Object.entries(row) as [key, value]}
+								<td class="border border-gray-300 py-2 px-4"
+									>{key === 'time' ? formatTime(value) : value}</td
+								>
 							{/each}
 						</tr>
 					{/each}

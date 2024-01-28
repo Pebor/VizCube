@@ -1,4 +1,6 @@
 <script>
+	import Modal from './../components/Modal.svelte';
+	import ImportFile from './../components/ImportFile.svelte';
 	import Advanced from './../components/Advanced.svelte';
 	import LineChartBasic from './../components/LineChartBasic.svelte';
 	import initSqlJs from 'sql.js';
@@ -6,6 +8,7 @@
 	import { db } from './../store.js';
 	import { query, querySimpleArray } from './../database.js';
 	import { formatTime } from './../utils.js';
+	import averageWorker from './../calculateAverageWorker.js?worker';
 
 	let file;
 	let loading = false;
@@ -14,6 +17,9 @@
 
 	let puzzleOptions = [];
 	let categoryOptions = [];
+	let categorySelected = [];
+	let categorySelectedOptions = [];
+	let isCategorySelection = false;
 
 	let advanced = false;
 	let db_loaded = false;
@@ -25,139 +31,75 @@
 	let avgs100;
 	let avgs1000;
 
-	let chart;
+	let mainChart;
 
-	async function handleFileChange(event) {
-		const selectedFile = event.target.files[0];
+	let showCatMore = false;
 
-		if (!selectedFile) return;
+	async function handleFileChange() {
+		loading = true;
+		// Create an index on the puzzle, category, and date columns
+		$db.exec('CREATE INDEX idx_twisty ON twisty (puzzle, category, date);');
 
-		Papa.parse(selectedFile, {
-			complete: async function (results) {
-				const SQL = await initSqlJs({
-					locateFile: (file) => `https://sql.js.org/dist/${file}`
+		puzzleOptions = querySimpleArray('Select distinct puzzle from twisty;');
+		puzzleOptions = puzzleOptions.filter((value) => value !== '');
+		puzzleOptions.sort();
+		puzzle = puzzleOptions[0];
+
+		for (let i = 0; i < puzzleOptions.length; i++) {
+			categoryOptions = querySimpleArray(
+				`Select distinct category from twisty where puzzle is '${puzzleOptions[i]}';`
+			);
+			categoryOptions = categoryOptions.filter((value) => value !== '');
+			for (let j = 0; j < categoryOptions.length; j++) {
+				let current_data = query(
+					`SELECT time, date FROM twisty where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}';`
+				);
+
+				let timeValues = current_data.map((item) => item.time);
+				let dateValues = current_data.map((item) => item.date);
+
+				let workers = [];
+				let numElementsList = [5, 12, 50, 100, 1000];
+				let avgs = [];
+				let p = puzzleOptions[i];
+				let c = categoryOptions[j];
+
+				let promises = numElementsList.map((numElements, index) => {
+					return new Promise((resolve, reject) => {
+						workers[index] = new averageWorker();
+
+						workers[index].onmessage = function (event) {
+							avgs[index] = event.data;
+							resolve();
+						};
+
+						workers[index].onerror = function (error) {
+							reject(error);
+						};
+
+						workers[index].postMessage({ timeValues, numElements });
+					});
 				});
 
-				// Create an in-memory SQLite database
-				db.set(new SQL.Database());
-
-				// Make avgs part of the database
-				const createTableQuery = `CREATE TABLE twisty (
-					puzzle varchar(10),
-					category text,
-					time int,
-					date datetime,
-					scramble text,
-					penalty tinyint,
-					comm text,
-					avg5 int,
-					avg12 int,
-					avg50 int,
-					avg100 int,
-					avg1000 int,
-					timePb boolean,
-					avg5Pb boolean,
-					avg12Pb boolean,
-					avg50Pb boolean,
-					avg100Pb boolean,
-					avg1000Pb boolean
-				);`;
-				$db.run(createTableQuery);
-
-				// Insert data into the table
-				const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
-				const stmt = $db.prepare(insertDataQuery);
-
-				for (let i = 1; i < results.data.length; i++) {
-					const data = results.data[i];
-
-					if (data[0] !== '') {
-						data[3] = data[3] / 1000;
-						data[6] = data[6] === '' ? null : data[6];
-
-						stmt.run(data);
+				let lowest = Infinity;
+				timeValues = timeValues.map((val) => {
+					if (val < lowest) {
+						lowest = val;
+						return { time: val, pb: true };
 					}
-				}
+					return { time: val, pb: false };
+				});
 
-				// Create an index on the puzzle, category, and date columns
-				$db.exec('CREATE INDEX idx_twisty ON twisty (puzzle, category, date);');
-
-				puzzleOptions = querySimpleArray('Select distinct puzzle from twisty;');
-				puzzleOptions = puzzleOptions.filter((value) => value !== '');
-				puzzleOptions.sort();
-				puzzle = puzzleOptions[0];
-
-				for (let i = 0; i < puzzleOptions.length; i++) {
-					categoryOptions = querySimpleArray(
-						`Select distinct category from twisty where puzzle is '${puzzleOptions[i]}';`
-					);
-					categoryOptions = categoryOptions.filter((value) => value !== '');
-					for (let j = 0; j < categoryOptions.length; j++) {
-						let current_data = query(
-							`SELECT time, date FROM twisty where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}';`
-						);
-
-						let timeValues = current_data.map((item) => item.time);
-						let dateValues = current_data.map((item) => item.date);
-
-						function calculateAverage(numElements) {
-							let tmp = [];
-							let count = 0,
-								sum = 0,
-								lowest = Infinity;
-							let pb = false;
-
-							toWindows(timeValues, numElements).forEach((ar) => {
-								// Sort the array
-								let sortedArray = ar.sort((a, b) => a - b);
-								// Calculate the indices for 10% and 90%
-								let lowerIndex = Math.floor(sortedArray.length * 0.1);
-								let upperIndex = Math.ceil(sortedArray.length * 0.9);
-								// Slice the array to remove the first and last 10%
-								let slicedArray = sortedArray.slice(lowerIndex, upperIndex);
-
-								slicedArray.forEach((val, idx) => {
-									sum += val;
-
-									if (idx == slicedArray.length - 1) {
-										pb = false;
-										count++;
-										let avg = sum / slicedArray.length;
-										if (avg < lowest) {
-											lowest = avg;
-											pb = true;
-										}
-										tmp.push({ avg, pb });
-										sum = 0;
-									}
-								});
-							});
-
-							// Add NULLs to the start of the array
-							for (let i = 0; i < numElements; i++) {
-								tmp.unshift({ avg: null, pb: false });
-							}
-
-							return tmp;
-						}
-
-						avgs5 = calculateAverage(5);
-						avgs12 = calculateAverage(12);
-						avgs50 = calculateAverage(50);
-						avgs100 = calculateAverage(100);
-						avgs1000 = calculateAverage(1000);
-
-						let lowest = Infinity;
-						timeValues = timeValues.map((val) => {
-							if (val < lowest) {
-								lowest = val;
-								return { time: val, pb: true };
-							}
-							return { time: val, pb: false };
-						});
-
-						const updateQuery = `UPDATE twisty SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ?, timePb = ?, avg5Pb = ?, avg12Pb = ?, avg50Pb = ?, avg100Pb = ?, avg1000Pb = ? where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}' and date is ?;`;
+				await Promise.all(promises)
+					.then(() => {
+						const updateQuery = `UPDATE twisty SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ?, timePb = ?, avg5Pb = ?, avg12Pb = ?, avg50Pb = ?, avg100Pb = ?, avg1000Pb = ? where puzzle is '${p}' and category is '${c}' and date is ?;`;
 						const new_stmt = $db.prepare(updateQuery);
+
+						avgs5 = avgs[0];
+						avgs12 = avgs[1];
+						avgs50 = avgs[2];
+						avgs100 = avgs[3];
+						avgs1000 = avgs[4];
 
 						// Start a transaction
 						$db.run('BEGIN TRANSACTION;');
@@ -181,97 +123,129 @@
 
 						// Commit the transaction
 						$db.run('COMMIT;');
-
 						new_stmt.free();
-					}
-				}
+						workers.forEach((worker) => worker.terminate());
+					})
+					.catch((error) => {
+						// Handle any errors
+						console.error(error);
+					});
+			}
+		}
 
-				const entries = querySimpleArray('SELECT date FROM twisty');
-				let longestSession = [];
-				let longestSessionTime = 0;
-				let currentSession = [];
-				let currentSessionStart = null;
-				let previousDate = null;
+		const entries = querySimpleArray('SELECT date FROM twisty order by date');
+		let longestSession = [];
+		let longestSessionTime = 0;
+		let currentSession = [];
+		let currentSessionStart = null;
+		let previousDate = null;
 
-				entries.forEach((entry) => {
-					const currentDate = new Date(entry);
+		entries.forEach((entry) => {
+			const currentDate = new Date(entry);
 
-					if (previousDate && currentDate - previousDate > 3600000) {
-						// More than 1 hour has passed since the last entry, start a new session
-						if (currentSession.length > longestSession.length) {
-							longestSession = currentSession;
-						}
-
-						currentSession = [entry];
-					} else {
-						// Less than 1 hour has passed since the last entry, continue the current session
-						currentSession.push(entry);
-					}
-
-					previousDate = currentDate;
-				});
-
-				// Check if the last session is the longest one
+			if (previousDate && currentDate - previousDate > 3600000) {
+				// More than 1 hour has passed since the last entry, start a new session
 				if (currentSession.length > longestSession.length) {
 					longestSession = currentSession;
 				}
 
-				console.log(
-					`Longest session has ${longestSession.length} entries and lasted ${formatTime(
-						Date.parse(longestSession[longestSession.length - 1]) - Date.parse(longestSession[0])
-					)}`
-				);
-
-				changeCategories();
-
-				stmt.free();
-				db_loaded = true;
+				currentSession = [entry];
+			} else {
+				// Less than 1 hour has passed since the last entry, continue the current session
+				currentSession.push(entry);
 			}
+
+			previousDate = currentDate;
 		});
+
+		// Check if the last session is the longest one
+		if (currentSession.length > longestSession.length) {
+			longestSession = currentSession;
+		}
+
+		console.log(
+			`Longest session has ${longestSession.length} entries and lasted ${formatTime(
+				Date.parse(longestSession[longestSession.length - 1]) - Date.parse(longestSession[0])
+			)} from ${longestSession[0]} to ${longestSession[longestSession.length - 1]}`
+		);
+
+		changePuzzle();
+
+		db_loaded = true;
 	}
 
-	function changeCategories() {
+	function changePuzzle() {
 		categoryOptions = querySimpleArray(
 			`Select distinct category from twisty where puzzle is '${puzzle}';`
 		);
 		categoryOptions = categoryOptions.filter((value) => value !== '');
 		category = categoryOptions[0];
+		isCategorySelection = false;
+
+		categorySelectedOptions = categoryOptions.map((cat) => ({
+			category: cat,
+			enabled: cat === category
+		}));
 
 		updateAvgs();
 	}
 
-	function toWindows(inputArray, size) {
-		return inputArray.reduce(
-			(acc, _, index, arr) =>
-				index + size > arr.length ? acc : acc.concat([arr.slice(index, index + size)]),
-			[]
-		);
+	function changeCategories(params) {
+		isCategorySelection = false;
+
+		categorySelectedOptions = categoryOptions.map((cat) => ({
+			category: cat,
+			enabled: cat === category
+		}));
+
+		updateAvgs();
+	}
+
+	function selectCategories() {
+		isCategorySelection = true;
+		categorySelected = categorySelectedOptions.filter((cat) => cat.enabled);
+		updateAvgs();
 	}
 
 	function updateAvgs() {
+		let selected = categorySelectedOptions.filter((cat) => cat.enabled);
+		selected = selected.map((cat) => "'" + cat.category + "'");
+
+		let categoryQuery = isCategorySelection
+			? `category IN (${selected.join(',')})`
+			: `category is '${category}'`;
+
+		console.log(categoryQuery);
+
 		current_times = querySimpleArray(
-			`SELECT time FROM twisty where puzzle is '${puzzle}' and category is '${category}';`
+			`SELECT time FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
 		).map((time, index) => ({ x: index, time }));
 
 		avgs5 = querySimpleArray(
-			`SELECT avg5 FROM twisty where puzzle is '${puzzle}' and category is '${category}';`
+			`SELECT avg5 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
 		).map((avg, index) => ({ x: index, time: avg }));
 
 		avgs12 = querySimpleArray(
-			`SELECT avg12 FROM twisty where puzzle is '${puzzle}' and category is '${category}';`
+			`SELECT avg12 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
 		).map((avg, index) => ({ x: index, time: avg }));
 
 		avgs50 = querySimpleArray(
-			`SELECT avg50 FROM twisty where puzzle is '${puzzle}' and category is '${category}';`
+			`SELECT avg50 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
 		).map((avg, index) => ({ x: index, time: avg }));
 
 		avgs100 = querySimpleArray(
-			`SELECT avg100 FROM twisty where puzzle is '${puzzle}' and category is '${category}';`
+			`SELECT avg100 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
 		).map((avg, index) => ({ x: index, time: avg }));
 
 		avgs1000 = querySimpleArray(
-			`SELECT avg1000 FROM twisty where puzzle is '${puzzle}' and category is '${category}';`
+			`SELECT avg1000 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
 		).map((avg, index) => ({ x: index, time: avg }));
+
+		if (mainChart) resetMainChart();
+	}
+
+	function resetMainChart() {
+		mainChart.resetZoom();
 	}
 </script>
 
@@ -286,7 +260,7 @@
 						bind:value={puzzle}
 						selected={puzzle}
 						on:change={() => {
-							changeCategories();
+							changePuzzle();
 						}}
 						class="px-3 py-2 border border-gray-300 rounded-md"
 					>
@@ -302,28 +276,33 @@
 						id="categoryPicker"
 						bind:value={category}
 						selected={category}
-						on:change={updateAvgs}
+						on:change={() => {
+							changeCategories();
+						}}
 						class="px-3 py-2 border border-gray-300 rounded-md"
 					>
 						{#each categoryOptions as option}
 							<option value={option}>{option}</option>
 						{/each}
 					</select>
+
+					<button type="button" on:click={() => (showCatMore = true)}>...</button>
+					<Modal bind:showModal={showCatMore} done={true} on:clickDone={() => selectCategories()}>
+						{#each categorySelectedOptions as { category, enabled }}
+							<div class="flex items-center">
+								<input type="checkbox" id={category} bind:checked={enabled} class="mr-2" />
+								<label for={category}>{category}</label>
+							</div>
+						{/each}
+					</Modal>
 				</div>
 			</div>
 
-			<div>
-				<label
-					for="fileInput"
-					class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-				>
-					Upload File
-				</label>
-				<input type="file" on:change={handleFileChange} id="fileInput" class="hidden" />
-			</div>
+			<ImportFile on:done={handleFileChange} />
 		</div>
 
 		<LineChartBasic
+			bind:chart={mainChart}
 			data={current_times}
 			avg5={avgs5}
 			avg12={avgs12}
@@ -331,6 +310,12 @@
 			avg100={avgs100}
 			avg1000={avgs1000}
 		/>
+		<button
+			on:click={() => resetMainChart()}
+			class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+		>
+			Reset zoom
+		</button>
 
 		<div>
 			<button
@@ -355,21 +340,7 @@
 			{#if loading && !db_loaded}
 				<p>Loading...</p>
 			{:else}
-				<label
-					for="fileInput"
-					class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-				>
-					Select File
-				</label>
-				<input
-					type="file"
-					on:change={(e) => {
-						handleFileChange(e);
-						loading = true;
-					}}
-					id="fileInput"
-					class="hidden"
-				/>
+				<ImportFile on:done={handleFileChange} />
 			{/if}
 		</div>
 	{/if}

@@ -8,7 +8,9 @@
 		Legend,
 		LineElement,
 		LinearScale,
+		LineController,
 		PointElement,
+		Colors,
 		CategoryScale
 	} from 'chart.js';
 	import 'chartjs-adapter-date-fns';
@@ -20,20 +22,25 @@
 	export let avg50;
 	export let avg100;
 	export let avg1000;
+	export let chart;
+
 	ChartJS.register(
 		Title,
 		Tooltip,
 		Legend,
 		LineElement,
 		LinearScale,
+		LineController,
 		PointElement,
 		CategoryScale,
+		Colors,
 		zoomPlugin
 	);
 </script>
 
 <div style="width: 70vw;">
 	<Line
+		bind:chart
 		options={{
 			responsive: true,
 			maintainAspectRatio: false,
@@ -42,13 +49,14 @@
 				tooltip: { enabled: false },
 				zoom: {
 					zoom: {
-						wheel: {
+						drag: {
 							enabled: true
 						},
-						pinch: {
-							enabled: true
-						},
-						mode: 'xy'
+						mode: 'x'
+					},
+					limits: {
+						x: { min: 0 },
+						y: { min: 0 }
 					}
 				}
 			},
@@ -58,8 +66,7 @@
 					position: 'bottom'
 				},
 				y: {
-					beginAtZero: true,
-					seggestedMin: 5,
+					seggestedMin: 0,
 					ticks: {
 						callback: function (value, index, values) {
 							return formatTime(value);
@@ -75,7 +82,8 @@
 					radius: 0
 				},
 				line: {
-					borderWidth: 2 // Increase the border width by 1 pixel
+					borderWidth: 3,
+					spanGaps: true
 				}
 			}
 		}}
@@ -86,7 +94,7 @@
 				{ data: avg50, label: 'Ao50' },
 				{ data: avg12, label: 'Ao12' },
 				{ data: avg5, label: 'Ao5' },
-				{ data: data, label: 'Time' }
+				{ data: data, label: 'Time', borderWidth: 1 }
 			]
 		}}
 	/>
