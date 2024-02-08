@@ -15,6 +15,7 @@
 	let showModal = false;
 	let next = true;
 	let state = 0;
+	let waiting = false;
 
 	function initialImport(event) {
 		files = event.target.files;
@@ -152,32 +153,35 @@
 		db.set(new SQL.Database());
 
 		// Make avgs part of the database
-		const createTableQuery = `CREATE TABLE twisty (
-					puzzle varchar(10),
-					category text,
-					time int,
-					date datetime,
-					scramble text,
-					penalty tinyint,
-					comm text,
-					avg5 int,
-					avg12 int,
-					avg50 int,
-					avg100 int,
-					avg1000 int,
-					timePb boolean,
-					avg5Pb boolean,
-					avg12Pb boolean,
-					avg50Pb boolean,
-					avg100Pb boolean,
-					avg1000Pb boolean
-				);`;
+		const createTableQuery = `
+		drop table if exists twisty;
+		CREATE TABLE twisty (
+                    puzzle varchar(10),
+                    category text,
+                    time int,
+                    date datetime,
+                    scramble text,
+                    penalty tinyint,
+                    comm text,
+                    avg5 int,
+                    avg12 int,
+                    avg50 int,
+                    avg100 int,
+                    avg1000 int,
+                    timePb boolean,
+                    avg5Pb boolean,
+                    avg12Pb boolean,
+                    avg50Pb boolean,
+                    avg100Pb boolean,
+                    avg1000Pb boolean
+                );`;
 		$db.run(createTableQuery);
 
 		// Insert data into the table
 		const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
 		const stmt = $db.prepare(insertDataQuery);
 
+		console.log(parsed);
 		for (let i = 0; i < parsed.length; i++) {
 			for (let j = 0; j < parsed[i].length; j++) {
 				const data = parsed[i][j];
@@ -208,8 +212,10 @@
 				break;
 
 			case 2:
+				waiting = true;
 				parsed = await parsed;
 				await generateDB();
+				waiting = false;
 				state++;
 				next = false;
 				break;
@@ -236,14 +242,26 @@
 			});
 		}
 	}
+
+	// TODO: Move to other in 'parsed' for creating the actual database dumbass
+	function moveToOther(puzzle, info) {
+		const indx = puzzleCategories[puzzle].indexOf(info);
+		puzzleCategories[puzzle].splice(indx, 1);
+		if (puzzleCategories[puzzle].length === 0) {
+			delete puzzleCategories[puzzle];
+		}
+
+		if (!puzzleCategories['other']) {
+			puzzleCategories['other'] = [];
+		}
+		if (puzzleCategories['other'].some((it) => it.category === info.category)) {
+			info.category = puzzle + '_' + info.category;
+		}
+
+		puzzleCategories['other'] = [...puzzleCategories['other'], info];
+	}
 </script>
 
-<label
-	for="fileInput"
-	class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
->
-	Select File
-</label>
 <input
 	type="file"
 	multiple
@@ -255,51 +273,92 @@
 		showModal = true;
 	}}
 	id="fileInput"
-	class="hidden"
+	class="file-input"
 />
 
 <Modal bind:showModal bind:next on:clickNext={changeState} on:clickDone={() => dispatch('done')}>
-	<h2 slot="header">Select file types</h2>
+	<h1 class="text-xl mb-8 text-neutral-content font-bold">Select file types</h1>
 
 	{#if state === 0}
 		{#each files as file, index}
-			<div>
-				<!-- svelte-ignore a11y-label-has-associated-control -->
-				<label>{file.name}</label>
-				<select on:change={(e) => setFileType(index, e.target.value)}>
-					<option value="twisty">Twisty Timer</option>
-					<option value="cstimer">CSTimer</option>
-				</select>
+			<div class="form-control">
+				<label class="label cursor-pointer">
+					<!-- svelte-ignore a11y-label-has-associated-control -->
+					<span class="label-text text-neutral-content text-md">{file.name}</span>
+					<select
+						class="select select-bordered"
+						on:change={(e) => setFileType(index, e.target.value)}
+					>
+						<option value="twisty">Twisty Timer</option>
+						<option value="cstimer">CSTimer</option>
+					</select>
+				</label>
 			</div>
 		{/each}
 	{:else if state === 1}
 		{#await parsed}
-			<p>Processing...</p>
-		{:then p}
-			<div class="flex">
-				<h2>All</h2>
-				<input type="checkbox" on:change={(e) => switchAll(e)} />
+			<div class="w-full">
+				<span class="loading loading-dots m-auto"></span>
 			</div>
-			{#each Object.entries(puzzleCategories) as [puzzle, information]}
-				<div class="my-4">
-					<div class="flex md-2">
-						<h3>{puzzle}</h3>
-						<input type="checkbox" id={puzzle} on:change={(e) => switchPuzzle(e, puzzle)} />
-					</div>
-
-					{#each information as info}
-						<div class="pl-4">
-							<input
-								type="checkbox"
-								bind:checked={info.enabled}
-								id={info.category}
-								on:change={() => console.log(puzzleCategories)}
-							/>
-							<label for={info.category}>{info.category}</label>
-						</div>
-					{/each}
+		{:then p}
+			{#if waiting}
+				<div class="w-full">
+					<span class="loading loading-dots m-auto"></span>
 				</div>
-			{/each}
+			{:else}
+				<div class="flex">
+					<label class="label cursor-pointer">
+						<input type="checkbox" class="checkbox" on:change={(e) => switchAll(e)} />
+						<span class="label-text text-xl ml-2">All</span>
+					</label>
+				</div>
+				{#each Object.entries(puzzleCategories) as [puzzle, information]}
+					<div class="my-4">
+						<div class="flex md-2">
+							<label class="label cursor-pointer">
+								<input
+									type="checkbox"
+									class="checkbox"
+									id={puzzle}
+									on:change={(e) => switchPuzzle(e, puzzle)}
+								/>
+								<span class="label-text text-md ml-2">{puzzle}</span>
+							</label>
+						</div>
+
+						{#each information as info}
+							<div class="pl-4 flex justify-between">
+								<div>
+									<label class="label cursor-pointer">
+										<input
+											type="checkbox"
+											bind:checked={info.enabled}
+											id={info.category}
+											on:change={() => console.log(puzzleCategories)}
+											class="checkbox"
+										/>
+										<span for={info.category} class="label-text ml-2">{info.category}</span>
+										<span
+											class="ml-2 badge badge-xs {info.from === 'cstimer'
+												? 'badge-primary'
+												: info.from === 'twisty'
+													? 'badge-secondary'
+													: 'badge-neutral'}"
+										></span>
+									</label>
+								</div>
+								{#if puzzle !== 'other'}
+									<button
+										type="button"
+										class="btn btn-outline btn-neutral btn-sm"
+										on:click={() => moveToOther(puzzle, info)}>other</button
+									>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/each}
+			{/if}
 		{:catch error}
 			<p>{error.message}</p>
 		{/await}

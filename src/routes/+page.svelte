@@ -30,6 +30,9 @@
 	let avgs50;
 	let avgs100;
 	let avgs1000;
+	let currentTimeSpend = 0;
+	let currentBestTime;
+	let currentBestAvg5;
 
 	let mainChart;
 
@@ -242,6 +245,15 @@
 		).map((avg, index) => ({ x: index, time: avg }));
 
 		if (mainChart) resetMainChart();
+
+		currentTimeSpend = querySimpleArray(
+			`select sum(time) from twisty where puzzle is '${puzzle}' and ${categoryQuery}`
+		)[0];
+
+		currentBestTime = query(
+			`select time, date from twisty where puzzle is '${puzzle}' and ${categoryQuery} and timePb is 1 order by date desc limit 1`
+		)[0];
+		console.log(currentBestTime);
 	}
 
 	function resetMainChart() {
@@ -249,11 +261,11 @@
 	}
 </script>
 
-<main>
+<main class="w-full">
 	{#if db_loaded}
-		<div class="flex justify-between items-center mb-4">
-			<div class="flex space-x-4">
-				<div class="flex flex-col items-center">
+		<div class="navbar bg-base-100">
+			<div class="flex space-x-4 navbar-start">
+				<div class="items-center form-control">
 					<label for="puzzlePicker" class="text-lg font-bold mb-1">Puzzle</label>
 					<select
 						id="puzzlePicker"
@@ -262,7 +274,7 @@
 						on:change={() => {
 							changePuzzle();
 						}}
-						class="px-3 py-2 border border-gray-300 rounded-md"
+						class="select select-primary"
 					>
 						{#each puzzleOptions as option}
 							<option value={option}>{option}</option>
@@ -270,7 +282,7 @@
 					</select>
 				</div>
 
-				<div class="flex flex-col items-center">
+				<div class="items-center form-control">
 					<label for="categoryPicker" class="text-lg font-bold mb-1">Category</label>
 					<select
 						id="categoryPicker"
@@ -279,55 +291,79 @@
 						on:change={() => {
 							changeCategories();
 						}}
-						class="px-3 py-2 border border-gray-300 rounded-md"
+						class="select select-primary"
 					>
 						{#each categoryOptions as option}
 							<option value={option}>{option}</option>
 						{/each}
 					</select>
+				</div>
+				<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)}>...</button>
+			</div>
 
-					<button type="button" on:click={() => (showCatMore = true)}>...</button>
-					<Modal bind:showModal={showCatMore} done={true} on:clickDone={() => selectCategories()}>
-						{#each categorySelectedOptions as { category, enabled }}
-							<div class="flex items-center">
-								<input type="checkbox" id={category} bind:checked={enabled} class="mr-2" />
-								<label for={category}>{category}</label>
-							</div>
-						{/each}
-					</Modal>
+			<div class="navbar-end">
+				<ImportFile on:done={handleFileChange} />
+			</div>
+		</div>
+
+		<Modal bind:showModal={showCatMore} done={true} on:clickDone={() => selectCategories()}>
+			<h1 class="text-xl mb-8 text-neutral-content font-bold">Select categories</h1>
+
+			{#each categorySelectedOptions as { category, enabled }}
+				<div class="flex">
+					<label class="label cursor-pointer">
+						<input type="checkbox" id={category} bind:checked={enabled} class="checkbox mr-2" />
+						<span class="label-text">{category}</span>
+					</label>
+				</div>
+			{/each}
+		</Modal>
+
+		<div>
+			<LineChartBasic
+				class="card"
+				bind:chart={mainChart}
+				data={current_times}
+				avg5={avgs5}
+				avg12={avgs12}
+				avg50={avgs50}
+				avg100={avgs100}
+				avg1000={avgs1000}
+			/>
+			<button on:click={() => resetMainChart()} class="btn btn-neutral"> Reset zoom </button>
+		</div>
+
+		<div class="stats shadow">
+			<div class="stat">
+				<div class="stat-title">Total solves</div>
+				<div class="stat-value">{current_times.length}</div>
+			</div>
+
+			<div class="stat">
+				<div class="stat-title">Total time solving</div>
+				<div class="stat-value">
+					{formatTime(currentTimeSpend)}
 				</div>
 			</div>
 
-			<ImportFile on:done={handleFileChange} />
+			<div class="stat">
+				<div class="stat-title">Best time</div>
+				<div class="stat-value">{formatTime(currentBestTime.time)}</div>
+				<div class="stat-desc">Set on {currentBestTime.date}</div>
+			</div>
 		</div>
-
-		<LineChartBasic
-			bind:chart={mainChart}
-			data={current_times}
-			avg5={avgs5}
-			avg12={avgs12}
-			avg50={avgs50}
-			avg100={avgs100}
-			avg1000={avgs1000}
-		/>
-		<button
-			on:click={() => resetMainChart()}
-			class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-		>
-			Reset zoom
-		</button>
 
 		<div>
 			<button
 				on:click={() => {
 					advanced = !advanced;
 				}}
-				class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+				class="btn btn-info"
 			>
 				{#if advanced}
 					Hide
 				{:else}
-					Show
+					Debug
 				{/if}
 			</button>
 		</div>
@@ -338,7 +374,7 @@
 	{:else}
 		<div class="center">
 			{#if loading && !db_loaded}
-				<p>Loading...</p>
+				<span class="loading loading-dots"></span>
 			{:else}
 				<ImportFile on:done={handleFileChange} />
 			{/if}

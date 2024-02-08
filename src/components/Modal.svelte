@@ -16,19 +16,19 @@
 	bind:this={dialog}
 	on:close={() => (showModal = false)}
 	on:click|self={() => dialog.close()}
+	class="modal m-auto"
 >
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div on:click|stopPropagation>
-		<slot name="header" />
-		<hr />
+	<div on:click|stopPropagation class="modal-box">
 		<slot />
-		<hr />
+		<div class="divider mb-2 mt-8" />
 		<!-- svelte-ignore a11y-autofocus -->
 		<div class="flex justify-between">
-			<button autofocus on:click={() => dialog.close()}>close</button>
+			<button class="btn btn-sm btn-error" autofocus on:click={() => dialog.close()}>close</button>
 			<div>
 				{#if next}
 					<button
+						class="btn btn-sm btn-info"
 						on:click={() => {
 							dispatch('clickNext');
 						}}>next</button
@@ -36,6 +36,7 @@
 				{/if}
 				{#if !next && done}
 					<button
+						class="btn btn-sm btn-success"
 						on:click={() => {
 							dialog.close();
 							dispatch('clickDone');
@@ -55,7 +56,7 @@
 		padding: 0;
 	}
 	dialog::backdrop {
-		background: rgba(0, 0, 0, 0.3);
+		background: rgba(0, 0, 0, 0.1);
 	}
 	dialog > div {
 		padding: 1em;
@@ -81,15 +82,5 @@
 		to {
 			opacity: 1;
 		}
-	}
-	button {
-		display: block;
-		border: 1px solid #ccc;
-		border-radius: 0.2em;
-		padding: 0em 0.3em;
-	}
-
-	hr {
-		margin: 0.25em 0;
 	}
 </style>

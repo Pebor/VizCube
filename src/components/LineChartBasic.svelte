@@ -38,7 +38,7 @@
 	);
 </script>
 
-<div style="width: 70vw;">
+<div style="width: 70vw;" class="m-auto my-8 p-8 rounded-box border-primary shadow-lg">
 	<Line
 		bind:chart
 		options={{
