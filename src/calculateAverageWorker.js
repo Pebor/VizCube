@@ -10,10 +10,11 @@ onmessage = function (event) {
 	}
 
 	let tmp = Array(numElements).fill({ avg: null, pb: false });
-	let count = 0,
-		sum = 0,
+	let sum = 0,
 		lowest = Infinity;
 	let pb = false;
+
+	// TODO: Make it work with DNF and +2
 
 	toWindows(timeValues, numElements).forEach((ar) => {
 		ar.sort((a, b) => a - b);
@@ -25,7 +26,6 @@ onmessage = function (event) {
 			sum += ar[i];
 		}
 
-		count++;
 		let avg = sum / (upperIndex - lowerIndex);
 		if (avg < lowest) {
 			lowest = avg;

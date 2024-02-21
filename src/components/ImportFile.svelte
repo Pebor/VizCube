@@ -130,7 +130,7 @@
 
 					data.push(
 						temp_data[`session${item}`].map((it) => {
-							return [puzzle, category, it[0][it[0].length - 1], it[3], it[1], 0, it[2]];
+							return [puzzle, category, it[0][1], it[3], it[1], 0, it[2]];
 						})
 					);
 				}
@@ -154,15 +154,15 @@
 
 		// Make avgs part of the database
 		const createTableQuery = `
-		drop table if exists twisty;
-		CREATE TABLE twisty (
+        drop table if exists twisty;
+        CREATE TABLE twisty (
                     puzzle varchar(10),
                     category text,
                     time int,
                     date datetime,
                     scramble text,
                     penalty tinyint,
-                    comm text,
+                    comment text,
                     avg5 int,
                     avg12 int,
                     avg50 int,
@@ -182,6 +182,7 @@
 		const stmt = $db.prepare(insertDataQuery);
 
 		console.log(parsed);
+		// TODO: Add penalty DNF and +2
 		for (let i = 0; i < parsed.length; i++) {
 			for (let j = 0; j < parsed[i].length; j++) {
 				const data = parsed[i][j];
@@ -190,6 +191,8 @@
 				) {
 					continue;
 				}
+
+				if (data[5] === 2) console.log(data); // TODO: fix fucking 0 bug
 
 				if (data[0] !== '') {
 					if (fileTypes[i] === 'twisty') {
@@ -309,7 +312,7 @@
 				<div class="flex">
 					<label class="label cursor-pointer">
 						<input type="checkbox" class="checkbox" on:change={(e) => switchAll(e)} />
-						<span class="label-text text-xl ml-2">All</span>
+						<span class="label-text text-2xl ml-2 font-bold">All</span>
 					</label>
 				</div>
 				{#each Object.entries(puzzleCategories) as [puzzle, information]}
@@ -322,7 +325,7 @@
 									id={puzzle}
 									on:change={(e) => switchPuzzle(e, puzzle)}
 								/>
-								<span class="label-text text-md ml-2">{puzzle}</span>
+								<span class="label-text text-lg ml-2 font-bold">{puzzle}</span>
 							</label>
 						</div>
 

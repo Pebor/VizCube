@@ -9,6 +9,13 @@
 	import { query, querySimpleArray } from './../database.js';
 	import { formatTime } from './../utils.js';
 	import averageWorker from './../calculateAverageWorker.js?worker';
+	import DateRangePicker from '../components/DateRangePicker.svelte';
+
+	let startDate;
+	let endDate;
+	let currentStartDate;
+	let currentEndDate;
+	let updateWithDate = false;
 
 	let file;
 	let loading = false;
@@ -31,10 +38,12 @@
 	let avgs100;
 	let avgs1000;
 	let currentTimeSpend = 0;
+	let currentSolveCount = 0;
 	let currentBestTime;
 	let currentBestAvg5;
 
 	let mainChart;
+	let byDate;
 
 	let showCatMore = false;
 
@@ -218,42 +227,62 @@
 			? `category IN (${selected.join(',')})`
 			: `category is '${category}'`;
 
-		console.log(categoryQuery);
+		startDate = querySimpleArray(
+			`select min(date) from twisty where puzzle is '${puzzle}' and ${categoryQuery}`
+		)[0].split(' ')[0];
+		endDate = querySimpleArray(
+			`select max(date) from twisty where puzzle is '${puzzle}' and ${categoryQuery}`
+		)[0].split(' ')[0];
 
-		current_times = querySimpleArray(
-			`SELECT time FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
-		).map((time, index) => ({ x: index, time }));
+		currentStartDate = updateWithDate ? currentStartDate : startDate;
+		currentEndDate = updateWithDate ? currentEndDate : endDate;
+		updateWithDate = false;
 
-		avgs5 = querySimpleArray(
-			`SELECT avg5 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
-		).map((avg, index) => ({ x: index, time: avg }));
+		let dateQuery = `strftime('%F', date)  >= '${currentStartDate}' and strftime('%F', date)  <= '${currentEndDate}'`;
+		let generalQuery = `FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} ORDER BY date`;
+		let chartDateQuery = `${byDate ? `, date` : ``} ${generalQuery}`;
 
-		avgs12 = querySimpleArray(
-			`SELECT avg12 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
-		).map((avg, index) => ({ x: index, time: avg }));
+		current_times = query(`SELECT time ${chartDateQuery}`).map((time, index) => ({
+			x: byDate ? time.date : index,
+			time: time.time
+		}));
 
-		avgs50 = querySimpleArray(
-			`SELECT avg50 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
-		).map((avg, index) => ({ x: index, time: avg }));
+		avgs5 = query(`SELECT avg5 ${chartDateQuery}`).map((avg, index) => ({
+			x: byDate ? avg.date : index,
+			time: avg.avg5
+		}));
 
-		avgs100 = querySimpleArray(
-			`SELECT avg100 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
-		).map((avg, index) => ({ x: index, time: avg }));
+		avgs12 = query(`SELECT avg12 ${chartDateQuery}`).map((avg, index) => ({
+			x: byDate ? avg.date : index,
+			time: avg.avg12
+		}));
 
-		avgs1000 = querySimpleArray(
-			`SELECT avg1000 FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} ORDER BY date;`
-		).map((avg, index) => ({ x: index, time: avg }));
+		avgs50 = query(`SELECT avg50 ${chartDateQuery}`).map((avg, index) => ({
+			x: byDate ? avg.date : index,
+			time: avg.avg50
+		}));
+
+		avgs100 = query(`SELECT avg100 ${chartDateQuery}`).map((avg, index) => ({
+			x: byDate ? avg.date : index,
+			time: avg.avg100
+		}));
+
+		avgs1000 = query(`SELECT avg1000 ${chartDateQuery}`).map((avg, index) => ({
+			x: byDate ? avg.date : index,
+			time: avg.avg1000
+		}));
 
 		if (mainChart) resetMainChart();
 
+		currentSolveCount = current_times.length;
+
 		currentTimeSpend = querySimpleArray(
-			`select sum(time) from twisty where puzzle is '${puzzle}' and ${categoryQuery}`
+			`select sum(time) from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery}`
 		)[0];
 
 		currentBestTime = query(
-			`select time, date from twisty where puzzle is '${puzzle}' and ${categoryQuery} and timePb is 1 order by date desc limit 1`
+			`select min(time) 'time', date from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery}`
 		)[0];
-		console.log(currentBestTime);
 	}
 
 	function resetMainChart() {
@@ -299,6 +328,16 @@
 					</select>
 				</div>
 				<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)}>...</button>
+				<DateRangePicker
+					bind:startDate
+					bind:endDate
+					bind:currentStartDate
+					bind:currentEndDate
+					on:apply={() => {
+						updateWithDate = true;
+						updateAvgs();
+					}}
+				/>
 			</div>
 
 			<div class="navbar-end">
@@ -321,7 +360,6 @@
 
 		<div>
 			<LineChartBasic
-				class="card"
 				bind:chart={mainChart}
 				data={current_times}
 				avg5={avgs5}
@@ -329,14 +367,17 @@
 				avg50={avgs50}
 				avg100={avgs100}
 				avg1000={avgs1000}
+				bind:byDate
 			/>
 			<button on:click={() => resetMainChart()} class="btn btn-neutral"> Reset zoom </button>
+			<label for="checkByDate" class="label" >by Date (gotta zoom in)</label>
+			<input type="checkbox" bind:checked={byDate} class="checkbox" id="checkByDate" on:change={updateAvgs} >
 		</div>
 
 		<div class="stats shadow">
 			<div class="stat">
 				<div class="stat-title">Total solves</div>
-				<div class="stat-value">{current_times.length}</div>
+				<div class="stat-value">{currentSolveCount}</div>
 			</div>
 
 			<div class="stat">
