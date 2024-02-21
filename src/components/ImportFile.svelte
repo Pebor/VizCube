@@ -181,7 +181,6 @@
 		const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
 		const stmt = $db.prepare(insertDataQuery);
 
-		console.log(parsed);
 		// TODO: Add penalty DNF and +2
 		for (let i = 0; i < parsed.length; i++) {
 			for (let j = 0; j < parsed[i].length; j++) {
@@ -195,10 +194,13 @@
 				if (data[5] === 2) console.log(data); // TODO: fix fucking 0 bug
 
 				if (data[0] !== '') {
+					
 					if (fileTypes[i] === 'twisty') {
-						data[3] = data[3] / 1000;
+						data[3] = data[3] / 1000; // sqlite unixepoch takes seconds (unix time)
 					}
-					data[6] = data[6] === '' ? null : data[6];
+
+					data[6] = data[6] === '' ? null : data[6]; // make comments null if empty
+					data[3] = data[5] == 1 ? parseInt(data[3]) + 2 : data[3]; // +2 penalty
 
 					stmt.run(data);
 				}

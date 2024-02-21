@@ -1,5 +1,5 @@
 onmessage = function (event) {
-	let { timeValues, numElements } = event.data;
+	let { timeValues, numElements, penaltyValues } = event.data;
 
 	function toWindows(inputArray, size) {
 		return inputArray.reduce(
@@ -9,32 +9,43 @@ onmessage = function (event) {
 		);
 	}
 
+	// Transform timeValues based on penaltyValues
+	timeValues = timeValues.map((value, index) => {
+		if (penaltyValues[index] === 2) {
+			return Number.MIN_VALUE;
+		} else {
+			return value;
+		}
+	});
+
 	let tmp = Array(numElements).fill({ avg: null, pb: false });
 	let sum = 0,
 		lowest = Infinity;
 	let pb = false;
-
-	// TODO: Make it work with DNF and +2
+	let lowerIndex = Math.ceil(numElements * 0.1);
+	let upperIndex = Math.floor(numElements * 0.9);
+	let diff = upperIndex - lowerIndex;
 
 	toWindows(timeValues, numElements).forEach((ar) => {
 		ar.sort((a, b) => a - b);
-		let lowerIndex = Math.floor(ar.length * 0.1);
-		let upperIndex = Math.ceil(ar.length * 0.9);
+		ar = ar.slice(lowerIndex, upperIndex);
 
-		sum = 0;
-		for (let i = lowerIndex; i < upperIndex; i++) {
-			sum += ar[i];
-		}
-
-		let avg = sum / (upperIndex - lowerIndex);
-		if (avg < lowest) {
-			lowest = avg;
-			pb = true;
+		if (ar.includes(Number.MIN_VALUE)) {
+			tmp.push({ avg: null, pb: 0 });
 		} else {
-			pb = false;
-		}
+			sum = ar.reduce((acc, curr) => acc + curr, 0);
+			
 
-		tmp.push({ avg, pb });
+			let avg = sum / (diff);
+			if (avg < lowest) {
+				lowest = avg;
+				pb = true;
+			} else {
+				pb = false;
+			}
+
+			tmp.push({ avg, pb });
+		}
 	});
 
 	postMessage(tmp);

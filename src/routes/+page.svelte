@@ -64,11 +64,12 @@
 			categoryOptions = categoryOptions.filter((value) => value !== '');
 			for (let j = 0; j < categoryOptions.length; j++) {
 				let current_data = query(
-					`SELECT time, date FROM twisty where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}';`
+					`SELECT time, date, penalty FROM twisty where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}';`
 				);
 
 				let timeValues = current_data.map((item) => item.time);
 				let dateValues = current_data.map((item) => item.date);
+				let penaltyValues = current_data.map((item) => item.penalty);
 
 				let workers = [];
 				let numElementsList = [5, 12, 50, 100, 1000];
@@ -89,10 +90,11 @@
 							reject(error);
 						};
 
-						workers[index].postMessage({ timeValues, numElements });
+						workers[index].postMessage({ timeValues, numElements, penaltyValues });
 					});
 				});
 
+				// calculate single pbs
 				let lowest = Infinity;
 				timeValues = timeValues.map((val) => {
 					if (val < lowest) {
@@ -242,9 +244,9 @@
 		let generalQuery = `FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} ORDER BY date`;
 		let chartDateQuery = `${byDate ? `, date` : ``} ${generalQuery}`;
 
-		current_times = query(`SELECT time ${chartDateQuery}`).map((time, index) => ({
+		current_times = query(`SELECT time, penalty ${chartDateQuery}`).map((time, index) => ({
 			x: byDate ? time.date : index,
-			time: time.time
+			time: time.penalty == '2' ? null : time.time
 		}));
 
 		avgs5 = query(`SELECT avg5 ${chartDateQuery}`).map((avg, index) => ({
@@ -277,11 +279,11 @@
 		currentSolveCount = current_times.length;
 
 		currentTimeSpend = querySimpleArray(
-			`select sum(time) from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery}`
+			`select sum(time) from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} and penalty is not 2`
 		)[0];
 
 		currentBestTime = query(
-			`select min(time) 'time', date from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery}`
+			`select min(time) 'time', date from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} and penalty is not 2`
 		)[0];
 	}
 
