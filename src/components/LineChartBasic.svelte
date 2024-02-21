@@ -16,17 +16,11 @@
 	} from 'chart.js';
 	import 'chartjs-adapter-date-fns';
 	import zoomPlugin from 'chartjs-plugin-zoom';
-	import { Parser } from 'papaparse';
+	import { currentTimes, currentTimesDNFs, avgs5, avgs12, avgs50, avgs100, avgs1000, byDate, mainChart } from './../store.js';
 
-	export let data;
-	export let avg5;
-	export let avg12;
-	export let avg50;
-	export let avg100;
-	export let avg1000;
-	export let chart;
-
-	export let byDate;
+	export let spanGaps;
+	export let points;
+	export let pointsSize;
 
 	ChartJS.register(
 		Title,
@@ -43,20 +37,15 @@
 	);
 </script>
 
-<div style="width: 70vw;" class="m-auto my-8 p-8 rounded-box border-primary shadow-lg">
+<div style="width: 70vw;">
 	<Line
-		bind:chart
+		bind:chart={$mainChart}
 		options={{
-			        elements: {
-            point: {
-                radius: 0 // default to disabled in all datasets
-            }
-        },
 			responsive: true,
 			maintainAspectRatio: false,
 			aspectRatio: 0.6, // Adjust this value to make the chart smaller or larger
 			normalized: true,
-			animation: data.length > 5000 ? false : true,
+			animation: $currentTimes.length > 5000 ? false : true,
 			plugins: {
 				zoom: {
 					zoom: {
@@ -80,11 +69,11 @@
 			},
 			scales: {
 				x: {
-					type: byDate ? 'time' : 'linear',
+					type: $byDate ? 'time' : 'linear',
 					position: 'bottom',
-					min: byDate ? data[0].date : 0,
-					max: byDate ? data[data.length-1].date : data.length,
-					time: byDate ? {
+					min: $byDate ? $currentTimes[0].date : 0,
+					max: $byDate ? $currentTimes[$currentTimes.length-1].date : $currentTimes.length,
+					time: $byDate ? {
 						parser: 'yyyy-MM-dd HH:mm:ss',
 					} : undefined
 				},
@@ -100,24 +89,28 @@
 			parsing: {
 				yAxisKey: 'time'
 			},
-			elements: {
-				point: {
-					radius: 0
-				},
+			datasets: {
 				line: {
 					borderWidth: 2,
-					spanGaps: true
+					spanGaps: spanGaps
+				}
+			},
+			elements: {
+				point: {
+					radius: points ? pointsSize : 0
 				}
 			}
 		}}
 		data={{
 			datasets: [
-				{ data: avg1000, label: 'Ao1000' },
-				{ data: avg100, label: 'Ao100' },
-				{ data: avg50, label: 'Ao50' },
-				{ data: avg12, label: 'Ao12' },
-				{ data: avg5, label: 'Ao5' },
-				{ data: data, label: 'Time', borderWidth: 1}
+				{ data: $avgs1000, label: 'Ao1000' },
+				{ data: $avgs100, label: 'Ao100' },
+				{ data: $avgs50, label: 'Ao50' },
+				{ data: $avgs12, label: 'Ao12' },
+				{ data: $avgs5, label: 'Ao5' },
+				{ data: $currentTimes, label: 'Time', borderWidth: 1},
+				{ data: $currentTimesDNFs, label: 'DNF', borderWidth: 0, pointRadius: 3, pointStyle: 'rect'},
+
 			]
 		}}
 	/>

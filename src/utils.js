@@ -5,7 +5,7 @@ export function formatTime(milliseconds) {
 	var days = Math.floor(hours / 24);
 	var weeks = Math.floor(days / 168);
 	var months = Math.floor(weeks / 4);
-	var milliseconds = (milliseconds % 1000).toString().slice(0, 2);
+	milliseconds = (milliseconds % 1000).toString().slice(0, 2);
 	hours -= days * 24;
 	days -= weeks * 168;
 	weeks -= months * 4;

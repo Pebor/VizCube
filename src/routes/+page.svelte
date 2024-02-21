@@ -2,7 +2,7 @@
 	import Modal from './../components/Modal.svelte';
 	import ImportFile from './../components/ImportFile.svelte';
 	import Advanced from './../components/Advanced.svelte';
-	import LineChartBasic from './../components/LineChartBasic.svelte';
+	import LineChartWidget from './../components/LineChartWidget.svelte';
 	import initSqlJs from 'sql.js';
 	import Papa from 'papaparse';
 	import { db } from './../store.js';
@@ -10,40 +10,44 @@
 	import { formatTime } from './../utils.js';
 	import averageWorker from './../calculateAverageWorker.js?worker';
 	import DateRangePicker from '../components/DateRangePicker.svelte';
+	import {
+		currentTimes,
+		currentTimesDNFs,
+		avgs5,
+		avgs12,
+		avgs50,
+		avgs100,
+		avgs1000,
+		byDate,
+		category,
+		categoryOptions,
+		chartDateQuery,
+		currentEndDate,
+		currentStartDate,
+		puzzle,
+		puzzleOptions,
+		generalQuery,
+		dateQuery,
+		categoryQuery,
+		mainChart
+	} from './../store.js';
 
 	let startDate;
 	let endDate;
-	let currentStartDate;
-	let currentEndDate;
 	let updateWithDate = false;
 
-	let file;
 	let loading = false;
 
-	let puzzle, category;
 
-	let puzzleOptions = [];
-	let categoryOptions = [];
-	let categorySelected = [];
-	let categorySelectedOptions = [];
-	let isCategorySelection = false;
+	let selectedCategories = [];
 
 	let advanced = false;
 	let db_loaded = false;
 
-	let current_times;
-	let avgs5;
-	let avgs12;
-	let avgs50;
-	let avgs100;
-	let avgs1000;
 	let currentTimeSpend = 0;
 	let currentSolveCount = 0;
 	let currentBestTime;
 	let currentBestAvg5;
-
-	let mainChart;
-	let byDate;
 
 	let showCatMore = false;
 
@@ -52,19 +56,19 @@
 		// Create an index on the puzzle, category, and date columns
 		$db.exec('CREATE INDEX idx_twisty ON twisty (puzzle, category, date);');
 
-		puzzleOptions = querySimpleArray('Select distinct puzzle from twisty;');
-		puzzleOptions = puzzleOptions.filter((value) => value !== '');
-		puzzleOptions.sort();
-		puzzle = puzzleOptions[0];
+		let tempPuzzleOptions = querySimpleArray('Select distinct puzzle from twisty;');
+		tempPuzzleOptions = tempPuzzleOptions.filter((value) => value !== '');
+		puzzleOptions.set(tempPuzzleOptions.sort());
+		puzzle.set($puzzleOptions[0]);
 
-		for (let i = 0; i < puzzleOptions.length; i++) {
-			categoryOptions = querySimpleArray(
-				`Select distinct category from twisty where puzzle is '${puzzleOptions[i]}';`
+		for (let i = 0; i < $puzzleOptions.length; i++) {
+			let tmpCategoryOptions = querySimpleArray(
+				`Select distinct category from twisty where puzzle is '${$puzzleOptions[i]}';`
 			);
-			categoryOptions = categoryOptions.filter((value) => value !== '');
-			for (let j = 0; j < categoryOptions.length; j++) {
+			categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
+			for (let j = 0; j < $categoryOptions.length; j++) {
 				let current_data = query(
-					`SELECT time, date, penalty FROM twisty where puzzle is '${puzzleOptions[i]}' and category is '${categoryOptions[j]}';`
+					`SELECT time, date, penalty FROM twisty where puzzle is '${$puzzleOptions[i]}' and category is '${$categoryOptions[j]}';`
 				);
 
 				let timeValues = current_data.map((item) => item.time);
@@ -74,8 +78,8 @@
 				let workers = [];
 				let numElementsList = [5, 12, 50, 100, 1000];
 				let avgs = [];
-				let p = puzzleOptions[i];
-				let c = categoryOptions[j];
+				let p = $puzzleOptions[i];
+				let c = $categoryOptions[j];
 
 				let promises = numElementsList.map((numElements, index) => {
 					return new Promise((resolve, reject) => {
@@ -109,28 +113,28 @@
 						const updateQuery = `UPDATE twisty SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ?, timePb = ?, avg5Pb = ?, avg12Pb = ?, avg50Pb = ?, avg100Pb = ?, avg1000Pb = ? where puzzle is '${p}' and category is '${c}' and date is ?;`;
 						const new_stmt = $db.prepare(updateQuery);
 
-						avgs5 = avgs[0];
-						avgs12 = avgs[1];
-						avgs50 = avgs[2];
-						avgs100 = avgs[3];
-						avgs1000 = avgs[4];
+						let tmpAvgs5 = avgs[0];
+						let tmpAvgs12 = avgs[1];
+						let tmpAvgs50 = avgs[2];
+						let tmpAvgs100 = avgs[3];
+						let tmpAvgs1000 = avgs[4];
 
 						// Start a transaction
 						$db.run('BEGIN TRANSACTION;');
 
 						dateValues.forEach((element, index) => {
 							new_stmt.run([
-								avgs5[index].avg,
-								avgs12[index].avg,
-								avgs50[index].avg,
-								avgs100[index].avg,
-								avgs1000[index].avg,
+								tmpAvgs5[index].avg,
+								tmpAvgs12[index].avg,
+								tmpAvgs50[index].avg,
+								tmpAvgs100[index].avg,
+								tmpAvgs1000[index].avg,
 								timeValues[index].pb,
-								avgs5[index].pb,
-								avgs12[index].pb,
-								avgs50[index].pb,
-								avgs100[index].pb,
-								avgs1000[index].pb,
+								tmpAvgs5[index].pb,
+								tmpAvgs12[index].pb,
+								tmpAvgs50[index].pb,
+								tmpAvgs100[index].pb,
+								tmpAvgs1000[index].pb,
 								element
 							]);
 						});
@@ -189,106 +193,110 @@
 	}
 
 	function changePuzzle() {
-		categoryOptions = querySimpleArray(
-			`Select distinct category from twisty where puzzle is '${puzzle}';`
+		let tmpCategoryOptions = querySimpleArray(
+			`Select distinct category from twisty where puzzle is '${$puzzle}';`
 		);
-		categoryOptions = categoryOptions.filter((value) => value !== '');
-		category = categoryOptions[0];
-		isCategorySelection = false;
-
-		categorySelectedOptions = categoryOptions.map((cat) => ({
+		categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
+		console.log('category options',$categoryOptions, tmpCategoryOptions);
+		category.set($categoryOptions[0]);
+		selectedCategories = $categoryOptions.map((cat) => ({
 			category: cat,
-			enabled: cat === category
+			enabled: cat === $category
 		}));
-
 		updateAvgs();
 	}
 
 	function changeCategories(params) {
-		isCategorySelection = false;
-
-		categorySelectedOptions = categoryOptions.map((cat) => ({
+		selectedCategories = $categoryOptions.map((cat) => ({
 			category: cat,
-			enabled: cat === category
+			enabled: cat === $category
 		}));
 
 		updateAvgs();
 	}
 
 	function selectCategories() {
-		isCategorySelection = true;
-		categorySelected = categorySelectedOptions.filter((cat) => cat.enabled);
+		console.log('selectCategories');
+		category.set(selectedCategories.filter((cat) => cat.enabled));
+
 		updateAvgs();
 	}
 
 	function updateAvgs() {
-		let selected = categorySelectedOptions.filter((cat) => cat.enabled);
-		selected = selected.map((cat) => "'" + cat.category + "'");
-
-		let categoryQuery = isCategorySelection
-			? `category IN (${selected.join(',')})`
-			: `category is '${category}'`;
-
 		startDate = querySimpleArray(
-			`select min(date) from twisty where puzzle is '${puzzle}' and ${categoryQuery}`
+			`select min(date) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery}`
 		)[0].split(' ')[0];
 		endDate = querySimpleArray(
-			`select max(date) from twisty where puzzle is '${puzzle}' and ${categoryQuery}`
+			`select max(date) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery}`
 		)[0].split(' ')[0];
 
-		currentStartDate = updateWithDate ? currentStartDate : startDate;
-		currentEndDate = updateWithDate ? currentEndDate : endDate;
+		currentStartDate.set(updateWithDate ? $currentStartDate : startDate);
+		currentEndDate.set(updateWithDate ? $currentEndDate : endDate);
 		updateWithDate = false;
 
-		let dateQuery = `strftime('%F', date)  >= '${currentStartDate}' and strftime('%F', date)  <= '${currentEndDate}'`;
-		let generalQuery = `FROM twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} ORDER BY date`;
-		let chartDateQuery = `${byDate ? `, date` : ``} ${generalQuery}`;
+		currentTimes.set(
+			query(`SELECT time, penalty ${$chartDateQuery}`).map((time, index) => ({
+				x: $byDate ? time.date : index,
+				time: time.penalty == '2' ? null : time.time
+			}))
+		);
+		currentTimesDNFs.set(
+			query(`SELECT time, penalty ${$chartDateQuery}`).map((time, index) => ({
+				x: $byDate ? time.date : index,
+				time: time.penalty == '2' ? time.time : null
+			}))
+		);
 
-		current_times = query(`SELECT time, penalty ${chartDateQuery}`).map((time, index) => ({
-			x: byDate ? time.date : index,
-			time: time.penalty == '2' ? null : time.time
-		}));
+		avgs5.set(
+			query(`SELECT avg5 ${$chartDateQuery}`).map((avg, index) => ({
+				x: $byDate ? avg.date : index,
+				time: avg.avg5
+			}))
+		);
 
-		avgs5 = query(`SELECT avg5 ${chartDateQuery}`).map((avg, index) => ({
-			x: byDate ? avg.date : index,
-			time: avg.avg5
-		}));
+		avgs12.set(
+			query(`SELECT avg12 ${$chartDateQuery}`).map((avg, index) => ({
+				x: $byDate ? avg.date : index,
+				time: avg.avg12
+			}))
+		);
 
-		avgs12 = query(`SELECT avg12 ${chartDateQuery}`).map((avg, index) => ({
-			x: byDate ? avg.date : index,
-			time: avg.avg12
-		}));
+		avgs50.set(
+			query(`SELECT avg50 ${$chartDateQuery}`).map((avg, index) => ({
+				x: $byDate ? avg.date : index,
+				time: avg.avg50
+			}))
+		);
 
-		avgs50 = query(`SELECT avg50 ${chartDateQuery}`).map((avg, index) => ({
-			x: byDate ? avg.date : index,
-			time: avg.avg50
-		}));
+		avgs100.set(
+			query(`SELECT avg100 ${$chartDateQuery}`).map((avg, index) => ({
+				x: $byDate ? avg.date : index,
+				time: avg.avg100
+			}))
+		);
 
-		avgs100 = query(`SELECT avg100 ${chartDateQuery}`).map((avg, index) => ({
-			x: byDate ? avg.date : index,
-			time: avg.avg100
-		}));
+		avgs1000.set(
+			query(`SELECT avg1000 ${$chartDateQuery}`).map((avg, index) => ({
+				x: $byDate ? avg.date : index,
+				time: avg.avg1000
+			}))
+		);
 
-		avgs1000 = query(`SELECT avg1000 ${chartDateQuery}`).map((avg, index) => ({
-			x: byDate ? avg.date : index,
-			time: avg.avg1000
-		}));
+		if ($mainChart) resetMainChart();
 
-		if (mainChart) resetMainChart();
-
-		currentSolveCount = current_times.length;
+		currentSolveCount = $currentTimes.length;
 
 		currentTimeSpend = querySimpleArray(
-			`select sum(time) from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} and penalty is not 2`
+			`select sum(time) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2`
 		)[0];
 
 		currentBestTime = query(
-			`select min(time) 'time', date from twisty where puzzle is '${puzzle}' and ${categoryQuery} and ${dateQuery} and penalty is not 2`
+			`select min(time) 'time', date from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2`
 		)[0];
 	}
 
 	function resetMainChart() {
-		mainChart.resetZoom();
+		$mainChart.resetZoom();
 	}
 </script>
 
@@ -300,14 +308,14 @@
 					<label for="puzzlePicker" class="text-lg font-bold mb-1">Puzzle</label>
 					<select
 						id="puzzlePicker"
-						bind:value={puzzle}
-						selected={puzzle}
+						bind:value={$puzzle}
+						selected={$puzzle}
 						on:change={() => {
 							changePuzzle();
 						}}
 						class="select select-primary"
 					>
-						{#each puzzleOptions as option}
+						{#each $puzzleOptions as option}
 							<option value={option}>{option}</option>
 						{/each}
 					</select>
@@ -317,14 +325,14 @@
 					<label for="categoryPicker" class="text-lg font-bold mb-1">Category</label>
 					<select
 						id="categoryPicker"
-						bind:value={category}
-						selected={category}
+						bind:value={$category}
+						selected={$category}
 						on:change={() => {
 							changeCategories();
 						}}
 						class="select select-primary"
 					>
-						{#each categoryOptions as option}
+						{#each $categoryOptions as option}
 							<option value={option}>{option}</option>
 						{/each}
 					</select>
@@ -333,8 +341,6 @@
 				<DateRangePicker
 					bind:startDate
 					bind:endDate
-					bind:currentStartDate
-					bind:currentEndDate
 					on:apply={() => {
 						updateWithDate = true;
 						updateAvgs();
@@ -350,7 +356,7 @@
 		<Modal bind:showModal={showCatMore} done={true} on:clickDone={() => selectCategories()}>
 			<h1 class="text-xl mb-8 text-neutral-content font-bold">Select categories</h1>
 
-			{#each categorySelectedOptions as { category, enabled }}
+			{#each selectedCategories as { category, enabled }}
 				<div class="flex">
 					<label class="label cursor-pointer">
 						<input type="checkbox" id={category} bind:checked={enabled} class="checkbox mr-2" />
@@ -360,21 +366,7 @@
 			{/each}
 		</Modal>
 
-		<div>
-			<LineChartBasic
-				bind:chart={mainChart}
-				data={current_times}
-				avg5={avgs5}
-				avg12={avgs12}
-				avg50={avgs50}
-				avg100={avgs100}
-				avg1000={avgs1000}
-				bind:byDate
-			/>
-			<button on:click={() => resetMainChart()} class="btn btn-neutral"> Reset zoom </button>
-			<label for="checkByDate" class="label" >by Date (gotta zoom in)</label>
-			<input type="checkbox" bind:checked={byDate} class="checkbox" id="checkByDate" on:change={updateAvgs} >
-		</div>
+		<LineChartWidget {resetMainChart} {updateAvgs} />
 
 		<div class="stats shadow">
 			<div class="stat">
