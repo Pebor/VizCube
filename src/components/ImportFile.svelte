@@ -11,6 +11,7 @@
 	let parsed = [];
 
 	let puzzleCategories = {};
+	let otherCategoryList = [];
 
 	let showModal = false;
 	let next = true;
@@ -185,16 +186,21 @@
 		for (let i = 0; i < parsed.length; i++) {
 			for (let j = 0; j < parsed[i].length; j++) {
 				const data = parsed[i][j];
-				if (
-					puzzleCategories[data[0]].some((it) => it.category === data[1] && it.enabled === false)
-				) {
-					continue;
+				if (typeof puzzleCategories === 'undefined') {
+					if (
+						puzzleCategories[data[0]].some((it) => it.category === data[1] && it.enabled === false)
+					) {
+						continue;
+					}
+				}
+
+				if (otherCategoryList.some((it) => it.puzzle === data[0] && it.info.category === data[1])) {
+					data[0] = 'other';
 				}
 
 				if (data[5] === 2) console.log(data); // TODO: fix fucking 0 bug
 
 				if (data[0] !== '') {
-					
 					if (fileTypes[i] === 'twisty') {
 						data[3] = data[3] / 1000; // sqlite unixepoch takes seconds (unix time)
 					}
@@ -250,6 +256,8 @@
 
 	// TODO: Move to other in 'parsed' for creating the actual database dumbass
 	function moveToOther(puzzle, info) {
+		otherCategoryList.push({ puzzle, info });
+
 		const indx = puzzleCategories[puzzle].indexOf(info);
 		puzzleCategories[puzzle].splice(indx, 1);
 		if (puzzleCategories[puzzle].length === 0) {
@@ -259,9 +267,10 @@
 		if (!puzzleCategories['other']) {
 			puzzleCategories['other'] = [];
 		}
-		if (puzzleCategories['other'].some((it) => it.category === info.category)) {
-			info.category = puzzle + '_' + info.category;
-		}
+		// not sure if this would be needed and it complicates things
+		// if (puzzleCategories['other'].some((it) => it.category === info.category)) {
+		// 	info.category = puzzle + '_' + info.category;
+		// }
 
 		puzzleCategories['other'] = [...puzzleCategories['other'], info];
 	}

@@ -21,6 +21,7 @@
 	export let spanGaps;
 	export let points;
 	export let pointsSize;
+	export let pointsOnly;
 
 	ChartJS.register(
 		Title,
@@ -91,7 +92,7 @@
 			},
 			datasets: {
 				line: {
-					borderWidth: 2,
+					borderWidth: pointsOnly ? 0 : 2,
 					spanGaps: spanGaps
 				}
 			},
@@ -108,7 +109,7 @@
 				{ data: $avgs50, label: 'Ao50' },
 				{ data: $avgs12, label: 'Ao12' },
 				{ data: $avgs5, label: 'Ao5' },
-				{ data: $currentTimes, label: 'Time', borderWidth: 1},
+				{ data: $currentTimes, label: 'Time', borderWidth: pointsOnly ? 0 : 1},
 				{ data: $currentTimesDNFs, label: 'DNF', borderWidth: 0, pointRadius: 3, pointStyle: 'rect'},
 
 			]

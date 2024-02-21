@@ -8,10 +8,11 @@
     let spanGaps = true;
     let points = false;
     let pointsSize = 2;
+    let pointsOnly = false;
 </script>
 
 <div class="m-auto my-8 p-8 rounded-box border-primary shadow-lg">
-	<LineChartBasic bind:spanGaps bind:points bind:pointsSize />
+	<LineChartBasic bind:spanGaps bind:points bind:pointsSize bind:pointsOnly />
 	<div class="flex">
 		<button on:click={() => resetMainChart()} class="btn btn-neutral"> Reset zoom </button>
 
@@ -26,10 +27,15 @@
 		</label>
 
         <label class="label cursor-pointer">
-			<input type="checkbox" bind:checked={points} class="checkbox" />
+			<input type="checkbox" bind:checked={points} class="checkbox" on:change={()=>{if(!points) pointsOnly=false}}/>
 			<span class="label-text ml-2 font-bold">Points</span>
 		</label>
 
         <input type="number" class="input input-bordered w-12" hidden={!points} bind:value={pointsSize}>
+
+        <label class="label cursor-pointer {!points ? 'hidden' : ''}" >
+			<input type="checkbox" bind:checked={pointsOnly} class="checkbox" />
+			<span class="label-text ml-2 font-bold">Points only</span>
+		</label>
 	</div>
 </div>
