@@ -1,8 +1,8 @@
 <script>
 	import LineChartBasic from './LineChartBasic.svelte';
-    import { byDate } from './../store.js';
+    import { byDate, mainChart } from './../store.js';
+	import { resetZoom } from 'chartjs-plugin-zoom';
 
-	export let resetMainChart;
 	export let updateAvgs;
 
     let spanGaps = true;
@@ -11,10 +11,12 @@
     let pointsOnly = false;
 </script>
 
-<div class="m-auto my-8 p-8 rounded-box border-primary shadow-lg">
-	<LineChartBasic bind:spanGaps bind:points bind:pointsSize bind:pointsOnly />
-	<div class="flex">
-		<button on:click={() => resetMainChart()} class="btn btn-neutral"> Reset zoom </button>
+<div class="p-8 rounded-box border-primary shadow-lg w-full items-start">
+	<div class="relative">
+		<LineChartBasic bind:spanGaps bind:points bind:pointsSize bind:pointsOnly />
+	</div>
+	<div class="flex mt-2">
+		<button on:click={() => $mainChart.resetZoom()} class="btn btn-neutral"> Reset zoom </button>
 
 		<label class="label cursor-pointer">
 			<input type="checkbox" bind:checked={$byDate} class="checkbox" on:change={updateAvgs} />

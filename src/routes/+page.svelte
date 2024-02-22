@@ -2,9 +2,6 @@
 	import Modal from './../components/Modal.svelte';
 	import ImportFile from './../components/ImportFile.svelte';
 	import Advanced from './../components/Advanced.svelte';
-	import LineChartWidget from './../components/LineChartWidget.svelte';
-	import initSqlJs from 'sql.js';
-	import Papa from 'papaparse';
 	import { db } from './../store.js';
 	import { query, querySimpleArray } from './../database.js';
 	import { formatTime } from './../utils.js';
@@ -26,11 +23,11 @@
 		currentStartDate,
 		puzzle,
 		puzzleOptions,
-		generalQuery,
-		dateQuery,
 		categoryQuery,
+		dateQuery,
 		mainChart
 	} from './../store.js';
+	import StatsWidget from './../components/StatsWidget.svelte';
 
 	let startDate;
 	let endDate;
@@ -38,16 +35,18 @@
 
 	let loading = false;
 
-
 	let selectedCategories = [];
 
 	let advanced = false;
 	let db_loaded = false;
 
-	let currentTimeSpend = 0;
-	let currentSolveCount = 0;
-	let currentBestTime;
-	let currentBestAvg5;
+	let stats = {
+		currentTimeSpend: 0,
+		currentBestTime: { time: 0, date: '' },
+		currentBestTimeQuery: [],
+		currentSolveCount: 0,
+		currentBestAvg5: { time: 0, date: '' }
+	};
 
 	let showCatMore = false;
 
@@ -100,8 +99,8 @@
 
 				// calculate single pbs
 				let lowest = Infinity;
-				timeValues = timeValues.map((val) => {
-					if (val < lowest) {
+				timeValues = timeValues.map((val, index) => {
+					if (val < lowest && penaltyValues[index] != 2) {
 						lowest = val;
 						return { time: val, pb: true };
 					}
@@ -197,7 +196,6 @@
 			`Select distinct category from twisty where puzzle is '${$puzzle}';`
 		);
 		categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
-		console.log('category options',$categoryOptions, tmpCategoryOptions);
 		category.set($categoryOptions[0]);
 		selectedCategories = $categoryOptions.map((cat) => ({
 			category: cat,
@@ -282,21 +280,18 @@
 			}))
 		);
 
-		if ($mainChart) resetMainChart();
+		if ($mainChart) {$mainChart.resetZoom();};
 
-		currentSolveCount = $currentTimes.length;
+		stats.currentSolveCount = $currentTimes.length;
 
-		currentTimeSpend = querySimpleArray(
+		stats.currentTimeSpend = querySimpleArray(
 			`select sum(time) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2`
 		)[0];
 
-		currentBestTime = query(
+		stats.currentBestTime = query(
 			`select min(time) 'time', date from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2`
 		)[0];
-	}
-
-	function resetMainChart() {
-		$mainChart.resetZoom();
+		stats.currentBestTimeQuery = query(`select time, date, scramble, penalty, comment from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`);
 	}
 </script>
 
@@ -366,27 +361,7 @@
 			{/each}
 		</Modal>
 
-		<LineChartWidget {resetMainChart} {updateAvgs} />
-
-		<div class="stats shadow">
-			<div class="stat">
-				<div class="stat-title">Total solves</div>
-				<div class="stat-value">{currentSolveCount}</div>
-			</div>
-
-			<div class="stat">
-				<div class="stat-title">Total time solving</div>
-				<div class="stat-value">
-					{formatTime(currentTimeSpend)}
-				</div>
-			</div>
-
-			<div class="stat">
-				<div class="stat-title">Best time</div>
-				<div class="stat-value">{formatTime(currentBestTime.time)}</div>
-				<div class="stat-desc">Set on {currentBestTime.date}</div>
-			</div>
-		</div>
+		<StatsWidget bind:stats={stats} {updateAvgs} />
 
 		<div>
 			<button

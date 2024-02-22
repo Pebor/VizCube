@@ -16,7 +16,17 @@
 	} from 'chart.js';
 	import 'chartjs-adapter-date-fns';
 	import zoomPlugin from 'chartjs-plugin-zoom';
-	import { currentTimes, currentTimesDNFs, avgs5, avgs12, avgs50, avgs100, avgs1000, byDate, mainChart } from './../store.js';
+	import {
+		currentTimes,
+		currentTimesDNFs,
+		avgs5,
+		avgs12,
+		avgs50,
+		avgs100,
+		avgs1000,
+		byDate,
+		mainChart
+	} from './../store.js';
 
 	export let spanGaps;
 	export let points;
@@ -38,81 +48,92 @@
 	);
 </script>
 
-<div style="width: 70vw;">
-	<Line
-		bind:chart={$mainChart}
-		options={{
-			responsive: true,
-			maintainAspectRatio: false,
-			aspectRatio: 0.6, // Adjust this value to make the chart smaller or larger
-			normalized: true,
-			animation: $currentTimes.length > 5000 ? false : true,
-			plugins: {
+<Line
+	bind:chart={$mainChart}
+	options={{
+		maintainAspectRatio: false,
+		resizeDelay: 100,
+		aspectRatio: 0.6,
+		normalized: true,
+		animation: $currentTimes.length > 5000 ? false : true,
+		plugins: {
+			legend: {
+				labels: {
+					font: {
+						family: "'Inter', sans-serif"
+					}
+				}
+			},
+			zoom: {
 				zoom: {
-					zoom: {
-						drag: {
-							enabled: true
-						},
-						mode: 'x'
+					drag: {
+						enabled: true
 					},
-					limits: {
-						x: { min: 0 },
-						y: { min: 0 }
-					}
+					mode: 'x'
 				},
-				tooltip: {
-					callbacks: {
-						label: function (context) {
-							return formatTime(context.parsed.y);
-						}
+				limits: {
+					x: { min: 0 },
+					y: { min: 0 }
+				}
+			},
+
+			tooltip: {
+				callbacks: {
+					label: function (context) {
+						return formatTime(context.parsed.y);
 					}
-				}
-			},
-			scales: {
-				x: {
-					type: $byDate ? 'time' : 'linear',
-					position: 'bottom',
-					min: $byDate ? $currentTimes[0].date : 0,
-					max: $byDate ? $currentTimes[$currentTimes.length-1].date : $currentTimes.length,
-					time: $byDate ? {
-						parser: 'yyyy-MM-dd HH:mm:ss',
-					} : undefined
-				},
-				y: {
-					seggestedMin: 0,
-					ticks: {
-						callback: function (value, index, values) {
-							return formatTime(value);
-						},
-					}
-				}
-			},
-			parsing: {
-				yAxisKey: 'time'
-			},
-			datasets: {
-				line: {
-					borderWidth: pointsOnly ? 0 : 2,
-					spanGaps: spanGaps
-				}
-			},
-			elements: {
-				point: {
-					radius: points ? pointsSize : 0
 				}
 			}
-		}}
-		data={{
-			datasets: [
-				{ data: $avgs1000, label: 'Ao1000' },
-				{ data: $avgs100, label: 'Ao100' },
-				{ data: $avgs50, label: 'Ao50' },
-				{ data: $avgs12, label: 'Ao12' },
-				{ data: $avgs5, label: 'Ao5' },
-				{ data: $currentTimes, label: 'Time', borderWidth: pointsOnly ? 0 : 1},
-				{ data: $currentTimesDNFs, label: 'DNF', borderWidth: 0, pointRadius: 3, pointStyle: 'rect'},
-
-			]
-		}}
-	/>
-</div>
+		},
+		scales: {
+			x: {
+				type: $byDate ? 'time' : 'linear',
+				stacked: true,
+				bound: 'ticks',
+				position: 'bottom',
+				min: $byDate ? $currentTimes[0].date : 0,
+				max: $byDate ? $currentTimes[$currentTimes.length - 1].date : $currentTimes.length,
+				time: $byDate
+					? {
+							parser: 'yyyy-MM-dd HH:mm:ss',
+							minUnit: 'minute'
+						}
+					: undefined
+			},
+			y: {
+				seggestedMin: 0,
+				ticks: {
+					callback: function (value, index, values) {
+						return formatTime(value);
+					}
+				}
+			}
+		},
+		parsing: {
+			yAxisKey: 'time'
+		},
+		datasets: {
+			line: {
+				borderWidth: pointsOnly ? 0 : 2,
+				spanGaps: spanGaps,
+				// tension: 0.4,
+			}
+		},
+		elements: {
+			point: {
+				radius: points ? pointsSize : 0
+			}
+		}
+	}}
+	data={{
+		datasets: [
+			{ data: $avgs1000, label: 'Ao1000' },
+			{ data: $avgs100, label: 'Ao100' },
+			{ data: $avgs50, label: 'Ao50' },
+			{ data: $avgs12, label: 'Ao12' },
+			{ data: $avgs5, label: 'Ao5' },
+			{ data: $currentTimes, label: 'Time', borderWidth: pointsOnly ? 0 : 1 },
+			{ data: $currentTimesDNFs, label: 'DNF', borderWidth: 0, pointRadius: 3, pointStyle: 'rect' }
+		]
+	}}
+/>

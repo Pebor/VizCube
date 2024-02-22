@@ -12,14 +12,14 @@ export function formatTime(milliseconds) {
 
 	var timeString = '';
 
-	timeString += months > 0 ? months.toString() + 'months ' : '';
-	timeString += weeks > 0 ? weeks.toString() + 'weeks ' : '';
-	timeString += days > 0 ? days.toString() + 'days ' : '';
+	timeString += months > 0 ? months.toString() + 'm ' : '';
+	timeString += weeks > 0 ? weeks.toString() + 'w ' : '';
+	timeString += days > 0 ? days.toString() + 'd ' : '';
 	timeString += hours > 0 ? hours.toString() + 'h ' : '';
 	timeString += minutes > 0 ? minutes.toString() + 'm ' : '';
 
-	timeString += seconds.toString().padStart(2, '0') + 's';
-	timeString += hours === 0 ? ' ' + milliseconds.padStart(2, '0') + 'ms' : '';
+	timeString += hours === 0 ? ' ' + seconds.toString().padStart(2, '0') + 's' : '';
+	timeString += hours === 0 && minutes < 10 ? ' ' + milliseconds.padStart(2, '0') + 'ms' : '';
 
 	return timeString;
 }

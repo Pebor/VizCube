@@ -1,12 +1,10 @@
 <script>
 	import { query } from './../database.js';
-	import { formatTime } from './../utils.js';
+	import QueryTable from './QueryTable.svelte';
 
 	let queryData = [];
 	let error = null;
 	let textareaValue = '';
-
-	const formatableKey = ['time', 'avg5', 'avg12', 'avg50', 'avg100', 'avg1000'];
 
 	function processQuery() {
 		error = null;
@@ -38,23 +36,6 @@
 			<span class="block sm:inline">{error}</span>
 		</div>
 	{:else if queryData.length > 0}
-		<table class="table table-zebra w-full">
-			<thead>
-				<tr>
-					{#each Object.keys(queryData[0]) as column}
-						<th>{column}</th>
-					{/each}
-				</tr>
-			</thead>
-			<tbody>
-				{#each queryData as row}
-					<tr>
-						{#each Object.entries(row) as [key, value]}
-							<td>{formatableKey.includes(key) && value != null ? formatTime(value) : value}</td>
-						{/each}
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<QueryTable {queryData} />
 	{/if}
 </div>
