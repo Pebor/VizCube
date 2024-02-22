@@ -11,16 +11,20 @@
 			return formatTime(value);
 		} else if (key === 'day') {
 			return daysOfWeek[value];
-        } else if (key === 'hour') {
-            return formatHour(value);
-		} else if (key !== 'penalty') {
+		} else if (key === 'hour') {
+			return formatHour(value);
+		} else if (key === 'penalty') {
+			if (value == 1) {
+				return '+2';
+			} else if (value == 2) {
+				return 'DNF';
+			} else {
+				return '';
+			}
+		} else if (value == null || value === 0)
+            return '';
+        else {
 			return value;
-		} else if (value == 1) {
-			return '+2';
-		} else if (value == 2) {
-			return 'DNF';
-		} else {
-			return '';
 		}
 	}
 </script>

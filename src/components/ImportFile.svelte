@@ -18,6 +18,8 @@
 	let state = 0;
 	let waiting = false;
 
+	let showHelp = false;
+
 	function initialImport(event) {
 		files = event.target.files;
 		fileTypes = new Array(files.length).fill('twisty');
@@ -155,8 +157,8 @@
 
 		// Make avgs part of the database
 		const createTableQuery = `
-        drop table if exists twisty;
-        CREATE TABLE twisty (
+        drop table if exists solutions;
+        CREATE TABLE solutions (
                     puzzle varchar(10),
                     category text,
                     time int,
@@ -179,7 +181,7 @@
 		$db.run(createTableQuery);
 
 		// Insert data into the table
-		const insertDataQuery = `INSERT INTO twisty VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
+		const insertDataQuery = `INSERT INTO solutions VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
 		const stmt = $db.prepare(insertDataQuery);
 
 		for (let i = 0; i < parsed.length; i++) {
@@ -280,24 +282,28 @@
 	}
 </script>
 
-<input
-	type="file"
-	multiple
-	on:click={(e) => (e.target.value = null)}
-	on:change={(e) => {
-		initialImport(e);
-		next = true;
-		state = 0;
-		showModal = true;
-	}}
-	id="fileInput"
-	class="file-input"
-/>
+<div class="relative">
+	<input
+		type="file"
+		multiple
+		on:click={(e) => (e.target.value = null)}
+		on:change={(e) => {
+			initialImport(e);
+			next = true;
+			state = 0;
+			showModal = true;
+		}}
+		id="fileInput"
+		class="file-input"
+	/>
+	<button class="btn btn-info btn-sm absolute -right-5 -top-5" on:click={()=> showHelp = true}>info</button>
+</div>
+
 
 <Modal bind:showModal bind:next on:clickNext={changeState} on:clickDone={() => dispatch('done')}>
-	<h1 class="text-xl mb-8 text-neutral-content font-bold">Select file types</h1>
 
 	{#if state === 0}
+		<h1 class="text-xl mb-8 text-neutral-content font-bold">Select file types</h1>
 		{#each files as file, index}
 			<div class="form-control">
 				<label class="label cursor-pointer">
@@ -314,6 +320,7 @@
 			</div>
 		{/each}
 	{:else if state === 1}
+		<h1 class="text-xl mb-8 text-neutral-content font-bold">Select puzzles to import</h1>
 		{#await parsed}
 			<div class="w-full">
 				<span class="loading loading-dots m-auto"></span>
@@ -379,5 +386,21 @@
 		{:catch error}
 			<p>{error.message}</p>
 		{/await}
+		{:else if state === 2}
+		<h1 class="text-xl mb-8 text-neutral-content font-bold">Importing</h1>
+		<p>Database has been created <b>succesfully</b>.</p>
+		<p>Next section might take a while, as it has to calculate averages. This depends on your device</p>
+		<p>If it takes too long, check the developer console for any errors. If errors are present it's an please file an issue.</p>
 	{/if}
+</Modal>
+
+<Modal bind:showModal={showHelp}>
+	<h1 class="text-2xl mb-8 text-neutral-content font-bold">HELP</h1>
+
+	<p>Currently, VizCube supports <b>Twisty Timer</b> and <b>CSTimer</b>.</p>
+	<p>It is expected that you import an export of a <b>backup</b>.</p>
+	<div class="divider"><b>Twisty Timer</b></div>
+	<p>You can export your data from the side menu <b>Export/import</b> -> <b>Export</b> -> <b>For backup</b>.</p>
+	<div class="divider"><b>CSTimer</b></div>
+	<p>You can export your data from with <b>Export</b> -> <b>Export to file</b>.</p>
 </Modal>

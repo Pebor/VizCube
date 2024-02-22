@@ -40,9 +40,9 @@ export const categoryQuery = derived([category], ([$category]) => {
 export const generalQuery = derived(
     [puzzle, categoryQuery, dateQuery],
     ([$puzzle, $categoryQuery, $dateQuery]) => {
-        if ($puzzle === 'ALL') return `FROM twisty where ${$dateQuery}`;
+        if ($puzzle === 'ALL') return `FROM solutions where ${$dateQuery}`;
 
-        return `FROM twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery}`; 
+        return `FROM solutions where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery}`; 
     }
 );
 
@@ -92,7 +92,7 @@ export const calculateSession = function (generalQuery, longestSession) {
         start: tmpLongestSession[0],
         end: tmpLongestSession[tmpLongestSession.length - 1]
     });
-    
+
     // console.log(
     //     `Longest session has ${$longestSession.length} entries and lasted ${formatTime(
     //         Date.parse($longestSession[$longestSession.length - 1]) - Date.parse($longestSession[0])

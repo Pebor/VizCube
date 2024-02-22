@@ -59,21 +59,21 @@
 	async function handleFileChange() {
 		loading = true;
 		// Create an index on the puzzle, category, and date columns
-		$db.exec('CREATE INDEX idx_twisty ON twisty (puzzle, category, date);');
+		$db.exec('CREATE INDEX idx_solutions ON solutions (puzzle, category, date);');
 
-		let tempPuzzleOptions = querySimpleArray('Select distinct puzzle from twisty;');
+		let tempPuzzleOptions = querySimpleArray('Select distinct puzzle from solutions;');
 		tempPuzzleOptions = tempPuzzleOptions.filter((value) => value !== '');
 		puzzleOptions.set(['ALL', ...tempPuzzleOptions.sort()]);
 		puzzle.set($puzzleOptions[1]);
 
 		for (let i = 1; i < $puzzleOptions.length; i++) {
 			let tmpCategoryOptions = querySimpleArray(
-				`Select distinct category from twisty where puzzle is '${$puzzleOptions[i]}';`
+				`Select distinct category from solutions where puzzle is '${$puzzleOptions[i]}';`
 			);
 			categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
 			for (let j = 0; j < $categoryOptions.length; j++) {
 				let current_data = query(
-					`SELECT time, date, penalty FROM twisty where puzzle is '${$puzzleOptions[i]}' and category is '${$categoryOptions[j]}';`
+					`SELECT time, date, penalty FROM solutions where puzzle is '${$puzzleOptions[i]}' and category is '${$categoryOptions[j]}';`
 				);
 
 				let timeValues = current_data.map((item) => item.time);
@@ -115,7 +115,7 @@
 
 				await Promise.all(promises)
 					.then(() => {
-						const updateQuery = `UPDATE twisty SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ?, timePb = ?, avg5Pb = ?, avg12Pb = ?, avg50Pb = ?, avg100Pb = ?, avg1000Pb = ? where puzzle is '${p}' and category is '${c}' and date is ?;`;
+						const updateQuery = `UPDATE solutions SET avg5 = ?, avg12 = ?, avg50 = ?, avg100 = ?, avg1000 = ?, timePb = ?, avg5Pb = ?, avg12Pb = ?, avg50Pb = ?, avg100Pb = ?, avg1000Pb = ? where puzzle is '${p}' and category is '${c}' and date is ?;`;
 						const new_stmt = $db.prepare(updateQuery);
 
 						let tmpAvgs5 = avgs[0];
@@ -164,7 +164,7 @@
 	function changePuzzle() {
 		if ($puzzle !== 'ALL') {
 			let tmpCategoryOptions = querySimpleArray(
-				`Select distinct category from twisty where puzzle is '${$puzzle}';`
+				`Select distinct category from solutions where puzzle is '${$puzzle}';`
 			);
 			console.log(tmpCategoryOptions);
 			categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
@@ -200,10 +200,10 @@
 	function updateAvgs() {
 		let tmpQuery = $puzzle === 'ALL' ? '' : `where puzzle is '${$puzzle}' and ${$categoryQuery}`;
 		startDate = querySimpleArray(
-			`select min(date) from twisty ${tmpQuery}`
+			`select min(date) from solutions ${tmpQuery}`
 		)[0].split(' ')[0];
 		endDate = querySimpleArray(
-			`select max(date) from twisty ${tmpQuery}`
+			`select max(date) from solutions ${tmpQuery}`
 		)[0].split(' ')[0];
 
 		currentStartDate.set(updateWithDate ? $currentStartDate : startDate);
@@ -330,43 +330,44 @@ FROM (
 
 <main class="w-full">
 	{#if db_loaded}
-		<div class="navbar bg-base-100">
-			<div class="flex space-x-4 navbar-start">
-				<div class="items-center form-control">
-					<label for="puzzlePicker" class="text-lg font-bold mb-1">Puzzle</label>
-					<select
-						id="puzzlePicker"
-						bind:value={$puzzle}
-						selected={$puzzle}
-						on:change={() => {
-							changePuzzle();
-						}}
-						class="select select-primary"
-					>
-						{#each $puzzleOptions as option}
-							<option value={option}>{option}</option>
-						{/each}
-					</select>
+		<div class="bg-base-100 mx-8 mt-2 mb-4 px-4 py-4 border-b-2 border-neutral">
+			<div class="flex relative">
+				<div class="flex grow-0 w-max space-x-4 items-center">
+					<div class="form-control">
+						<select
+							id="puzzlePicker"
+							bind:value={$puzzle}
+							selected={$puzzle}
+							on:change={() => {
+								changePuzzle();
+							}}
+							class="select select-primary"
+						>
+							{#each $puzzleOptions as option}
+								<option value={option}>{option}</option>
+							{/each}
+						</select>
+					</div>
+	
+					<div class="items-center form-control">
+						<select
+							id="categoryPicker"
+							bind:value={$category}
+							selected={$category}
+							on:change={() => {
+								changeCategories();
+							}}
+							class="select select-primary"
+							disabled={$puzzle === 'ALL'}
+						>
+							{#each $categoryOptions as option}
+								<option value={option}>{option}</option>
+							{/each}
+						</select>
+					</div>
+					<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)} disabled={$puzzle === 'ALL'}>...</button>			
 				</div>
 
-				<div class="items-center form-control">
-					<label for="categoryPicker" class="text-lg font-bold mb-1">Category</label>
-					<select
-						id="categoryPicker"
-						bind:value={$category}
-						selected={$category}
-						on:change={() => {
-							changeCategories();
-						}}
-						class="select select-primary"
-						disabled={$puzzle === 'ALL'}
-					>
-						{#each $categoryOptions as option}
-							<option value={option}>{option}</option>
-						{/each}
-					</select>
-				</div>
-				<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)} disabled={$puzzle === 'ALL'}>...</button>
 				<DateRangePicker
 					bind:startDate
 					bind:endDate
@@ -375,10 +376,6 @@ FROM (
 						updateAvgs();
 					}}
 				/>
-			</div>
-
-			<div class="navbar-end">
-				<ImportFile on:done={handleFileChange} />
 			</div>
 		</div>
 
