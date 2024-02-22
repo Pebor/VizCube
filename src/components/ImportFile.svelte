@@ -185,19 +185,17 @@
 		for (let i = 0; i < parsed.length; i++) {
 			for (let j = 0; j < parsed[i].length; j++) {
 				const data = parsed[i][j];
-				if (typeof puzzleCategories === 'undefined') {
-					if (
-						puzzleCategories[data[0]].some((it) => it.category === data[1] && it.enabled === false)
-					) {
-						continue;
-					}
-				}
+				if (puzzleCategories == undefined) continue;
 
 				if (otherCategoryList.some((it) => it.puzzle === data[0] && it.info.category === data[1])) {
 					data[0] = 'other';
 				}
 
-				if (data[5] === 2) console.log(data); // TODO: fix fucking 0 bug
+				if (
+					puzzleCategories[data[0]].some((it) => it.category === data[1] && it.enabled === false)
+				) {
+					continue;
+				}
 
 				if (data[0] !== '') {
 					if (fileTypes[i] === 'twisty') {
@@ -219,21 +217,28 @@
 		switch (state + 1) {
 			case 1:
 				parsed = parseFiles();
+				state++;
 				break;
 
 			case 2:
-				waiting = true;
-				parsed = await parsed;
-				await generateDB();
-				waiting = false;
-				state++;
-				next = false;
+				var isValid = false;
+				for (let puzzle in puzzleCategories) {
+					isValid = puzzleCategories[puzzle].some((it) => it.enabled);
+					if (isValid) break;
+				}
+				if (isValid) {
+					waiting = true;
+					parsed = await parsed;
+					await generateDB();
+					waiting = false;
+					next = false;
+					state++;
+				}
 				break;
 
 			default:
 				break;
 		}
-		state++;
 	}
 
 	function switchPuzzle(event, puzzle) {
@@ -347,7 +352,6 @@
 											type="checkbox"
 											bind:checked={info.enabled}
 											id={info.category}
-											on:change={() => console.log(puzzleCategories)}
 											class="checkbox"
 										/>
 										<span for={info.category} class="label-text ml-2">{info.category}</span>

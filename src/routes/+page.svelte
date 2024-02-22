@@ -166,6 +166,7 @@
 			let tmpCategoryOptions = querySimpleArray(
 				`Select distinct category from twisty where puzzle is '${$puzzle}';`
 			);
+			console.log(tmpCategoryOptions);
 			categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
 			category.set($categoryOptions[0]);
 			selectedCategories = $categoryOptions.map((cat) => ({

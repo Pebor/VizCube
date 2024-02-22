@@ -5,7 +5,7 @@ export function formatTime(milliseconds) {
 	var days = Math.floor(hours / 24);
 	var weeks = Math.floor(days / 168);
 	var months = Math.floor(weeks / 4);
-	milliseconds = (milliseconds % 1000).toString().slice(0, 2);
+	milliseconds = Math.floor((milliseconds % 1000)/10).toString().slice(0, 2).padStart(2, '0');
 	hours -= days * 24;
 	days -= weeks * 168;
 	weeks -= months * 4;
@@ -19,7 +19,7 @@ export function formatTime(milliseconds) {
 	timeString += minutes > 0 ? minutes.toString() + 'm ' : '';
 
 	timeString += hours === 0 ? ' ' + seconds.toString().padStart(2, '0') + 's' : '';
-	timeString += hours === 0 && minutes < 10 ? ' ' + milliseconds.padStart(2, '0') + 'ms' : '';
+	timeString += hours === 0 && minutes < 10 ? ' ' + milliseconds + 'ms' : '';
 
 	return timeString;
 }
