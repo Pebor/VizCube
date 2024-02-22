@@ -18,7 +18,7 @@
 	}
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col mx-16">
 	<div class="flex">
 		<textarea
 			class="textarea textarea-bordered w-full"

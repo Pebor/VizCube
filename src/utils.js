@@ -23,3 +23,12 @@ export function formatTime(milliseconds) {
 
 	return timeString;
 }
+
+export function formatHour(hour) {
+  var ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  hour = hour ? hour : 12; // Handle midnight (0 hours)
+
+  return hour + ' ' + ampm;
+}
+

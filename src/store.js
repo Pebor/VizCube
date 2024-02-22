@@ -1,9 +1,13 @@
 import { writable, derived } from 'svelte/store';
+import { querySimpleArray } from './database.js';
+import { formatTime } from './utils.js';
 
 export const db = writable(null);
 
 export const currentTimes = writable([]);
 export const currentTimesDNFs = writable([]);
+export const currentTimes2s = writable([]);
+export const currentTimesPBs = writable([]);
 export const avgs5 = writable([]);
 export const avgs12 = writable([]);
 export const avgs50 = writable([]);
@@ -36,9 +40,9 @@ export const categoryQuery = derived([category], ([$category]) => {
 export const generalQuery = derived(
     [puzzle, categoryQuery, dateQuery],
     ([$puzzle, $categoryQuery, $dateQuery]) => {
+        if ($puzzle === 'ALL') return `FROM twisty where ${$dateQuery}`;
 
-
-       return `FROM twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} ORDER BY date`; 
+        return `FROM twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery}`; 
     }
 );
 
@@ -47,6 +51,52 @@ export const byDate = writable(false);
 export const chartDateQuery = derived(
     [byDate, generalQuery],
     ([$byDate, $generalQuery]) => {
-        return `${$byDate ? `, date` : ``} ${$generalQuery}`;
+        return `${$byDate ? `, date` : ``} ${$generalQuery} ORDER BY date`;
     }
 );
+
+export const longestSession = writable([]);
+
+export const calculateSession = function (generalQuery, longestSession) {
+    const entries = querySimpleArray(`SELECT date ${generalQuery} order by date`);
+    let tmpLongestSession = [];
+    let currentSession = [];
+    let previousDate = null;
+
+    entries.forEach((entry) => {
+        const currentDate = new Date(entry);
+
+        if (previousDate && currentDate - previousDate > 3600000) {
+            // More than 1 hour has passed since the last entry, start a new session
+            if (currentSession.length > tmpLongestSession.length) {
+                tmpLongestSession = currentSession;
+            }
+
+            currentSession = [entry];
+        } else {
+            // Less than 1 hour has passed since the last entry, continue the current session
+            currentSession.push(entry);
+        }
+
+        previousDate = currentDate;
+    });
+
+    // Check if the last session is the longest one
+    if (currentSession.length > tmpLongestSession.length) {
+        tmpLongestSession = currentSession;
+    }
+
+    longestSession.set({
+        length: tmpLongestSession.length,
+        time: formatTime(Date.parse(tmpLongestSession[tmpLongestSession.length - 1]) - Date.parse(tmpLongestSession[0])),
+        start: tmpLongestSession[0],
+        end: tmpLongestSession[tmpLongestSession.length - 1]
+    });
+    
+    // console.log(
+    //     `Longest session has ${$longestSession.length} entries and lasted ${formatTime(
+    //         Date.parse($longestSession[$longestSession.length - 1]) - Date.parse($longestSession[0])
+    //     )} from ${$longestSession[0]} to ${$longestSession[$longestSession.length - 1]}`
+    // );
+
+};

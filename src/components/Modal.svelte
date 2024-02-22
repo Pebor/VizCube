@@ -17,7 +17,7 @@
 	bind:this={dialog}
 	on:close={() => (showModal = false)}
 	on:click|self={() => dialog.close()}
-	class="modal m-auto"
+	class="modal"
 >
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div on:click|stopPropagation class="modal-box min-w-fit {width}">

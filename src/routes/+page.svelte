@@ -2,7 +2,7 @@
 	import Modal from './../components/Modal.svelte';
 	import ImportFile from './../components/ImportFile.svelte';
 	import Advanced from './../components/Advanced.svelte';
-	import { db } from './../store.js';
+	import { db, longestSession } from './../store.js';
 	import { query, querySimpleArray } from './../database.js';
 	import { formatTime } from './../utils.js';
 	import averageWorker from './../calculateAverageWorker.js?worker';
@@ -10,6 +10,8 @@
 	import {
 		currentTimes,
 		currentTimesDNFs,
+		currentTimes2s,
+		currentTimesPBs,
 		avgs5,
 		avgs12,
 		avgs50,
@@ -25,6 +27,8 @@
 		puzzleOptions,
 		categoryQuery,
 		dateQuery,
+		generalQuery,
+		calculateSession,
 		mainChart
 	} from './../store.js';
 	import StatsWidget from './../components/StatsWidget.svelte';
@@ -42,10 +46,12 @@
 
 	let stats = {
 		currentTimeSpend: 0,
-		currentBestTime: { time: 0, date: '' },
-		currentBestTimeQuery: [],
+		currentBestTime: { time: 0, date: '', query: [] },
 		currentSolveCount: 0,
-		currentBestAvg5: { time: 0, date: '' }
+		currentBestAvg5: { time: 0, date: '' },
+		bestWeekDay: { day: '', avg: '', query: [] },
+		bestHour: { hour: '', avg: '', query: [] },
+		mostInDay: { date: '', solves: 0, query: [] },
 	};
 
 	let showCatMore = false;
@@ -57,10 +63,10 @@
 
 		let tempPuzzleOptions = querySimpleArray('Select distinct puzzle from twisty;');
 		tempPuzzleOptions = tempPuzzleOptions.filter((value) => value !== '');
-		puzzleOptions.set(tempPuzzleOptions.sort());
-		puzzle.set($puzzleOptions[0]);
+		puzzleOptions.set(['ALL', ...tempPuzzleOptions.sort()]);
+		puzzle.set($puzzleOptions[1]);
 
-		for (let i = 0; i < $puzzleOptions.length; i++) {
+		for (let i = 1; i < $puzzleOptions.length; i++) {
 			let tmpCategoryOptions = querySimpleArray(
 				`Select distinct category from twisty where puzzle is '${$puzzleOptions[i]}';`
 			);
@@ -150,57 +156,27 @@
 			}
 		}
 
-		const entries = querySimpleArray('SELECT date FROM twisty order by date');
-		let longestSession = [];
-		let longestSessionTime = 0;
-		let currentSession = [];
-		let currentSessionStart = null;
-		let previousDate = null;
-
-		entries.forEach((entry) => {
-			const currentDate = new Date(entry);
-
-			if (previousDate && currentDate - previousDate > 3600000) {
-				// More than 1 hour has passed since the last entry, start a new session
-				if (currentSession.length > longestSession.length) {
-					longestSession = currentSession;
-				}
-
-				currentSession = [entry];
-			} else {
-				// Less than 1 hour has passed since the last entry, continue the current session
-				currentSession.push(entry);
-			}
-
-			previousDate = currentDate;
-		});
-
-		// Check if the last session is the longest one
-		if (currentSession.length > longestSession.length) {
-			longestSession = currentSession;
-		}
-
-		console.log(
-			`Longest session has ${longestSession.length} entries and lasted ${formatTime(
-				Date.parse(longestSession[longestSession.length - 1]) - Date.parse(longestSession[0])
-			)} from ${longestSession[0]} to ${longestSession[longestSession.length - 1]}`
-		);
-
 		changePuzzle();
 
 		db_loaded = true;
 	}
 
 	function changePuzzle() {
-		let tmpCategoryOptions = querySimpleArray(
-			`Select distinct category from twisty where puzzle is '${$puzzle}';`
-		);
-		categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
-		category.set($categoryOptions[0]);
-		selectedCategories = $categoryOptions.map((cat) => ({
-			category: cat,
-			enabled: cat === $category
-		}));
+		if ($puzzle !== 'ALL') {
+			let tmpCategoryOptions = querySimpleArray(
+				`Select distinct category from twisty where puzzle is '${$puzzle}';`
+			);
+			categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
+			category.set($categoryOptions[0]);
+			selectedCategories = $categoryOptions.map((cat) => ({
+				category: cat,
+				enabled: cat === $category
+			}));
+		} else {
+			categoryOptions.set([]);
+			category.set('');
+			selectedCategories = [];
+		}
 		updateAvgs();
 	}
 
@@ -221,11 +197,12 @@
 	}
 
 	function updateAvgs() {
+		let tmpQuery = $puzzle === 'ALL' ? '' : `where puzzle is '${$puzzle}' and ${$categoryQuery}`;
 		startDate = querySimpleArray(
-			`select min(date) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery}`
+			`select min(date) from twisty ${tmpQuery}`
 		)[0].split(' ')[0];
 		endDate = querySimpleArray(
-			`select max(date) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery}`
+			`select max(date) from twisty ${tmpQuery}`
 		)[0].split(' ')[0];
 
 		currentStartDate.set(updateWithDate ? $currentStartDate : startDate);
@@ -242,6 +219,18 @@
 			query(`SELECT time, penalty ${$chartDateQuery}`).map((time, index) => ({
 				x: $byDate ? time.date : index,
 				time: time.penalty == '2' ? time.time : null
+			}))
+		);
+		currentTimes2s.set(
+			query(`SELECT time, penalty ${$chartDateQuery}`).map((time, index) => ({
+				x: $byDate ? time.date : index,
+				time: time.penalty == '1' ? time.time : null
+			}))
+		);
+		currentTimesPBs.set(
+			query(`SELECT time, timePb ${$chartDateQuery}`).map((time, index) => ({
+				x: $byDate ? time.date : index,
+				time: time.timePb == '1' ? time.time : null
 			}))
 		);
 
@@ -280,18 +269,61 @@
 			}))
 		);
 
-		if ($mainChart) {$mainChart.resetZoom();};
+		if ($mainChart) {
+			$mainChart.resetZoom();
+		}
 
 		stats.currentSolveCount = $currentTimes.length;
 
 		stats.currentTimeSpend = querySimpleArray(
-			`select sum(time) from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2`
+			`select sum(time) ${$generalQuery} and penalty is not 2 order by date desc`
 		)[0];
 
 		stats.currentBestTime = query(
-			`select min(time) 'time', date from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2`
+			`select time, date ${$generalQuery} and timePb is 1 and penalty is not 2 order by date desc`
 		)[0];
-		stats.currentBestTimeQuery = query(`select time, date, scramble, penalty, comment from twisty where puzzle is '${$puzzle}' and ${$categoryQuery} and ${$dateQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`);
+		stats.currentBestTime.query = query(
+			`select ${$puzzle === 'ALL' ? 'puzzle, category, ' : ''} time, date, scramble, penalty, comment ${$generalQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`
+		);
+
+		stats.bestWeekDay.day = querySimpleArray(
+			`select strftime('%w', date) ${$generalQuery} group by strftime('%w', date) order by count(*) desc limit 1`
+		)[0];
+		stats.bestWeekDay.avg = querySimpleArray(
+			`SELECT AVG(daily_counts) AS average_count_per_day
+FROM (
+    SELECT COUNT(*) AS daily_counts
+    ${$generalQuery}
+    GROUP BY strftime('%w', date) 
+);`
+		)[0];
+		stats.bestWeekDay.query = query(
+			`select strftime('%w', date) day, count(*) solves ${$generalQuery} group by strftime('%w', date) order by count(*) desc`
+		);
+
+		stats.bestHour.hour = querySimpleArray(
+			`select strftime('%H', date) ${$generalQuery} group by strftime('%H', date) order by count(*) desc limit 1`
+		)[0];
+		stats.bestHour.avg = querySimpleArray(
+			`SELECT AVG(hourly_counts) AS average_count_per_hour 
+FROM (
+	SELECT COUNT(*) AS hourly_counts
+	${$generalQuery}
+	GROUP BY strftime('%H', date)
+);`
+		)[0];
+		stats.bestHour.query = query(
+			`select strftime('%H', date) hour, count(*) solves ${$generalQuery} group by strftime('%H', date) order by count(*) desc`
+		);
+
+		stats.mostInDay = query(
+			`select strftime('%F', date) as 'date', count(*) solves ${$generalQuery} group by strftime('%F', date) order by count(*) desc limit 1`
+		)[0];
+		stats.mostInDay.query = query(
+			`select strftime('%F', date) as 'date', count(*) solves ${$generalQuery} group by strftime('%F', date) order by count(*) desc limit 5`
+		);
+
+		calculateSession($generalQuery, longestSession);
 	}
 </script>
 
@@ -326,13 +358,14 @@
 							changeCategories();
 						}}
 						class="select select-primary"
+						disabled={$puzzle === 'ALL'}
 					>
 						{#each $categoryOptions as option}
 							<option value={option}>{option}</option>
 						{/each}
 					</select>
 				</div>
-				<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)}>...</button>
+				<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)} disabled={$puzzle === 'ALL'}>...</button>
 				<DateRangePicker
 					bind:startDate
 					bind:endDate
@@ -361,19 +394,19 @@
 			{/each}
 		</Modal>
 
-		<StatsWidget bind:stats={stats} {updateAvgs} />
+		<StatsWidget bind:stats {updateAvgs} />
 
 		<div>
 			<button
 				on:click={() => {
 					advanced = !advanced;
 				}}
-				class="btn btn-info"
+				class="btn btn-info ml-16 my-8"
 			>
 				{#if advanced}
 					Hide
 				{:else}
-					Debug
+					Advanced
 				{/if}
 			</button>
 		</div>

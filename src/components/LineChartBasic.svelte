@@ -19,6 +19,8 @@
 	import {
 		currentTimes,
 		currentTimesDNFs,
+		currentTimes2s,
+		currentTimesPBs,
 		avgs5,
 		avgs12,
 		avgs50,
@@ -32,6 +34,7 @@
 	export let points;
 	export let pointsSize;
 	export let pointsOnly;
+	export let tension;
 
 	ChartJS.register(
 		Title,
@@ -116,7 +119,7 @@
 			line: {
 				borderWidth: pointsOnly ? 0 : 2,
 				spanGaps: spanGaps,
-				// tension: 0.4,
+				tension: tension / 100,
 			}
 		},
 		elements: {
@@ -133,7 +136,9 @@
 			{ data: $avgs12, label: 'Ao12' },
 			{ data: $avgs5, label: 'Ao5' },
 			{ data: $currentTimes, label: 'Time', borderWidth: pointsOnly ? 0 : 1 },
-			{ data: $currentTimesDNFs, label: 'DNF', borderWidth: 0, pointRadius: 3, pointStyle: 'rect' }
+			{ data: $currentTimesDNFs, label: 'DNF', borderWidth: 0, pointRadius: 3, pointStyle: 'rect' },
+			{ data: $currentTimes2s, label: '+2', borderWidth: 0, pointRadius: 3, pointStyle: 'rect' },
+			{ data: $currentTimesPBs, label: 'PB', borderWidth: 1, borderDash: [5,10], pointRadius: 3, pointStyle: 'rect' },
 		]
 	}}
 />
