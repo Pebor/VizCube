@@ -51,7 +51,7 @@
 		currentBestAvg5: { time: 0, date: '' },
 		bestWeekDay: { day: '', avg: '', query: [] },
 		bestHour: { hour: '', avg: '', query: [] },
-		mostInDay: { date: '', solves: 0, query: [] },
+		mostInDay: { date: '', solves: 0, query: [] }
 	};
 
 	let showCatMore = false;
@@ -199,12 +199,8 @@
 
 	function updateAvgs() {
 		let tmpQuery = $puzzle === 'ALL' ? '' : `where puzzle is '${$puzzle}' and ${$categoryQuery}`;
-		startDate = querySimpleArray(
-			`select min(date) from solutions ${tmpQuery}`
-		)[0].split(' ')[0];
-		endDate = querySimpleArray(
-			`select max(date) from solutions ${tmpQuery}`
-		)[0].split(' ')[0];
+		startDate = querySimpleArray(`select min(date) from solutions ${tmpQuery}`)[0].split(' ')[0];
+		endDate = querySimpleArray(`select max(date) from solutions ${tmpQuery}`)[0].split(' ')[0];
 
 		currentStartDate.set(updateWithDate ? $currentStartDate : startDate);
 		currentEndDate.set(updateWithDate ? $currentEndDate : endDate);
@@ -333,8 +329,10 @@ FROM (
 		<div class="bg-base-100 mx-8 mt-2 mb-4 px-4 py-4 border-b-2 border-neutral">
 			<div class="flex relative">
 				<div class="flex grow-0 w-max space-x-4 items-center">
-					<div class="form-control">
-						<select
+					<div class="items-center form-control">
+						<label for="puzzlePicker" class="label">
+							<span class="label-text text-lg font-bold mr-2">Puzzle</span>
+							<select
 							id="puzzlePicker"
 							bind:value={$puzzle}
 							selected={$puzzle}
@@ -347,25 +345,35 @@ FROM (
 								<option value={option}>{option}</option>
 							{/each}
 						</select>
+						</label>
 					</div>
-	
+
 					<div class="items-center form-control">
-						<select
-							id="categoryPicker"
-							bind:value={$category}
-							selected={$category}
-							on:change={() => {
-								changeCategories();
-							}}
-							class="select select-primary"
-							disabled={$puzzle === 'ALL'}
-						>
-							{#each $categoryOptions as option}
-								<option value={option}>{option}</option>
-							{/each}
-						</select>
+						<label for="puzzlePicker" class="label">
+							<span class="label-text text-lg font-bold mr-2">Category</span>
+							<select
+								id="categoryPicker"
+								bind:value={$category}
+								selected={$category}
+								on:change={() => {
+									changeCategories();
+								}}
+								class="select select-primary"
+								disabled={$puzzle === 'ALL'}
+							>
+								{#each $categoryOptions as option}
+									<option value={option}>{option}</option>
+								{/each}
+							</select>
+						</label>
 					</div>
-					<button type="button" class="btn btn-sm" on:click={() => (showCatMore = true)} disabled={$puzzle === 'ALL'}>...</button>			
+
+					<button
+						type="button"
+						class="btn btn-sm"
+						on:click={() => (showCatMore = true)}
+						disabled={$puzzle === 'ALL'}>...</button
+					>
 				</div>
 
 				<DateRangePicker
