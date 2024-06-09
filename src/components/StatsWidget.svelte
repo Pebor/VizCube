@@ -2,11 +2,13 @@
 	import { puzzle, longestSession } from '../store.js';
 	import { formatTime, formatHour } from './../utils.js';
 	import LineChartWidget from './LineChartWidget.svelte';
+	import MatrixChart from './MatrixChart.svelte';
 	import Modal from './Modal.svelte';
 	import QueryTable from './QueryTable.svelte';
 
 	export let stats;
 	export let updateAvgs;
+	export let maxCount;
 
 	let showPbModal = false;
 	let showWeekDayModal = false;
@@ -28,8 +30,9 @@
 		longest session (od kdy do kdy a kolik)
 		Day with the most solves (zase asi nastavitelné na den, hour, week, month)
 		Den v týdnu kdy nejvíce skládáš -->
-<div class="flex flex-col gap-2 mx-16">
-	<div class="grid grid-cols-4 gap-2 max-w-full mx-auto">
+<div class="flex flex-col gap-2 mx-2 lg:mx-16">
+	<!--  Stats needs rework, off of daisyui -->
+	<div class="grid grid-cols-4 gap-2 mx-auto">
 		<div class="stat place-items-center shadow-lg">
 			<div class="stat-title">Total solves</div>
 			<div class="stat-value">{stats.currentSolveCount}</div>
@@ -92,6 +95,7 @@
 	{#if $puzzle !== 'ALL'}
 		<LineChartWidget {updateAvgs} />
 	{/if}
+	<MatrixChart {maxCount} />
 </div>
 
 <Modal bind:showModal={showPbModal}>

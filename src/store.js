@@ -14,6 +14,8 @@ export const avgs50 = writable([]);
 export const avgs100 = writable([]);
 export const avgs1000 = writable([]);
 
+export const matrixData = writable([]);
+
 export const mainChart = writable(null);
 
 export const puzzle = writable('');

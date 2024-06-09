@@ -12,7 +12,7 @@
 	let tension = 0;
 </script>
 
-<div class="p-8 rounded-box border-primary shadow-lg w-full items-start">
+<div class="p-8 rounded-box border-primary shadow-lg w-max md:w-full items-start">
 	<div class="relative">
 		<LineChartBasic bind:spanGaps bind:points bind:pointsSize bind:pointsOnly bind:tension />
 	</div>

@@ -29,9 +29,12 @@
 		dateQuery,
 		generalQuery,
 		calculateSession,
-		mainChart
+		mainChart,
+		matrixData
 	} from './../store.js';
 	import StatsWidget from './../components/StatsWidget.svelte';
+	import MatrixChart from '../components/MatrixChart.svelte';
+	import { max } from 'date-fns';
 
 	let startDate;
 	let endDate;
@@ -53,6 +56,8 @@
 		bestHour: { hour: '', avg: '', query: [] },
 		mostInDay: { date: '', solves: 0, query: [] }
 	};
+
+	let maxCount = 0;
 
 	let showCatMore = false;
 
@@ -320,31 +325,47 @@ FROM (
 			`select strftime('%F', date) as 'date', count(*) solves ${$generalQuery} group by strftime('%F', date) order by count(*) desc limit 5`
 		);
 
+		matrixData.set(
+			query(
+				`select strftime('%F', date) dat, strftime('%w', date) day, count(*) val ${$generalQuery} and date between date('${$currentEndDate}', '-1 year') and date('${$currentEndDate}', '+1 day') group by strftime('%F', date) order by date`
+			).map((item) => ({
+				x: item.dat,
+				y: (((parseInt(item.day) + 6) % 7) + 1).toString(),
+				d: item.dat,
+				v: item.val
+			}))
+		);
+		maxCount = querySimpleArray(
+			`select count(*) ${$generalQuery} and date between date('${$currentEndDate}', '-1 year') and date('${$currentEndDate}', '+1 day') group by strftime('%F', date) order by count(*) desc limit 1`
+		)[0];
+
+		console.log(maxCount);
+
 		calculateSession($generalQuery, longestSession);
 	}
 </script>
 
 <main class="w-full">
 	{#if db_loaded}
-		<div class="bg-base-100 mx-8 mt-2 mb-4 px-4 py-4 border-b-2 border-neutral">
-			<div class="flex relative">
-				<div class="flex grow-0 w-max space-x-4 items-center">
+		<div class="bg-base-100 mt-2 p-4 px-8 border-neutral flex lg:flex-row flex-col justify-between w-full" >
+			<div class="w-full m-auto lg:m-0">
+				<div class="flex grow-0 space-x-4 items-center justify-center lg:justify-start">
 					<div class="items-center form-control">
 						<label for="puzzlePicker" class="label">
 							<span class="label-text text-lg font-bold mr-2">Puzzle</span>
 							<select
-							id="puzzlePicker"
-							bind:value={$puzzle}
-							selected={$puzzle}
-							on:change={() => {
-								changePuzzle();
-							}}
-							class="select select-primary"
-						>
-							{#each $puzzleOptions as option}
-								<option value={option}>{option}</option>
-							{/each}
-						</select>
+								id="puzzlePicker"
+								bind:value={$puzzle}
+								selected={$puzzle}
+								on:change={() => {
+									changePuzzle();
+								}}
+								class="select select-primary"
+							>
+								{#each $puzzleOptions as option}
+									<option value={option}>{option}</option>
+								{/each}
+							</select>
 						</label>
 					</div>
 
@@ -375,17 +396,19 @@ FROM (
 						disabled={$puzzle === 'ALL'}>...</button
 					>
 				</div>
-
-				<DateRangePicker
-					bind:startDate
-					bind:endDate
-					on:apply={() => {
-						updateWithDate = true;
-						updateAvgs();
-					}}
-				/>
 			</div>
+
+			<DateRangePicker
+				bind:startDate
+				bind:endDate
+				on:apply={() => {
+					updateWithDate = true;
+					updateAvgs();
+				}}
+			/>
 		</div>
+
+		<div style="width: 95%" class="divider h-full p-0 mx-auto my-2 mb-4" />
 
 		<Modal bind:showModal={showCatMore} done={true} on:clickDone={() => selectCategories()}>
 			<h1 class="text-xl mb-8 text-neutral-content font-bold">Select categories</h1>
@@ -400,7 +423,7 @@ FROM (
 			{/each}
 		</Modal>
 
-		<StatsWidget bind:stats {updateAvgs} />
+		<StatsWidget bind:stats {updateAvgs} {maxCount} />
 
 		<div>
 			<button
