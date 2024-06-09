@@ -7,6 +7,7 @@
 	import { formatTime } from './../utils.js';
 	import averageWorker from './../calculateAverageWorker.js?worker';
 	import DateRangePicker from '../components/DateRangePicker.svelte';
+	import { inject } from '@vercel/analytics'
 	import {
 		currentTimes,
 		currentTimesDNFs,
@@ -171,7 +172,6 @@
 			let tmpCategoryOptions = querySimpleArray(
 				`Select distinct category from solutions where puzzle is '${$puzzle}';`
 			);
-			console.log(tmpCategoryOptions);
 			categoryOptions.set(tmpCategoryOptions.filter((value) => value !== ''));
 			category.set($categoryOptions[0]);
 			selectedCategories = $categoryOptions.map((cat) => ({
@@ -196,7 +196,6 @@
 	}
 
 	function selectCategories() {
-		console.log('selectCategories');
 		category.set(selectedCategories.filter((cat) => cat.enabled));
 
 		updateAvgs();
@@ -338,8 +337,6 @@ FROM (
 		maxCount = querySimpleArray(
 			`select count(*) ${$generalQuery} and date between date('${$currentEndDate}', '-1 year') and date('${$currentEndDate}', '+1 day') group by strftime('%F', date) order by count(*) desc limit 1`
 		)[0];
-
-		console.log(maxCount);
 
 		calculateSession($generalQuery, longestSession);
 	}
