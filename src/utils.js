@@ -32,3 +32,29 @@ export function formatHour(hour) {
   return hour + ' ' + ampm;
 }
 
+const formatableKey = ['time', 'avg5', 'avg12', 'avg50', 'avg100', 'avg1000'];
+const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export function formatTable(key, value) {
+	if (formatableKey.includes(key) && value != null) {
+		return formatTime(value);
+	} else if (key === 'day') {
+		return daysOfWeek[value];
+	} else if (key === 'shortDay') {
+		return daysOfWeek[value].substring(0, 3);
+	} else if (key === 'hour') {
+		return formatHour(value);
+	} else if (key === 'penalty') {
+		if (value == 1) {
+			return '+2';
+		} else if (value == 2) {
+			return 'DNF';
+		} else {
+			return '';
+		}
+	} else if (value == null || value === 0)
+		return '';
+	else {
+		return value;
+	}
+}

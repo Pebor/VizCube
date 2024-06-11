@@ -37,7 +37,9 @@
 	$: backgroundColor = $matrixData.map((item) => {
 		const value = item.v;
 		const alpha = value / maxCount;
-		const rgbaColor = `rgba(0, 128, 0, ${alpha})`;
+		const adjustedAlpha = Math.pow(alpha, 0.8); // Adjust alpha value
+		//${Math.floor(169 * (1 - adjustedAlpha))}
+		const rgbaColor = `rgba(0, 169, 110, ${adjustedAlpha})`;
 		return rgbaColor;
 	});
 
@@ -126,15 +128,7 @@
 				}
 			}
 		},
-		scales: scales,
-		layout: {
-			padding: {
-				top: 0,
-				right: 0,
-				bottom: 0,
-				left: 0
-			}
-		}
+		scales: scales
 	};
 
 	$: data = {
@@ -144,8 +138,8 @@
 				data: $matrixData,
 				backgroundColor: backgroundColor,
 				borderWidth: 1,
-				hoverBackgroundColor: 'yellow',
-				hoverBorderColor: 'yellowgreen',
+				hoverBackgroundColor: '#00A96E',
+				hoverBorderColor: '#006238',
 				width(c) {
 					const a = c.chart.chartArea || {};
 					return (a.right - a.left) / weeksBetween - 2;
@@ -184,7 +178,7 @@
 	onMount(() => {});
 </script>
 
-<div class="p-8 rounded-box border-primary shadow-lg relative">
+<div class="p-8 rounded-box border-primary shadow-lg relative w-full">
 	<canvas id="matrix-chart"></canvas>
 </div>
 

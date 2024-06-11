@@ -11,7 +11,7 @@ export function querySimpleArray(query) {
 
 	stmt.free();
 
-	return queryResult.map((obj) => Object.values(obj)[0]);
+	return queryResult.map((obj) => Object.values(obj)[0]) || [];
 }
 
 export function query(query) {

@@ -7,7 +7,7 @@
 	import { formatTime } from './../utils.js';
 	import averageWorker from './../calculateAverageWorker.js?worker';
 	import DateRangePicker from '../components/DateRangePicker.svelte';
-	import { inject } from '@vercel/analytics'
+	import { inject } from '@vercel/analytics';
 	import {
 		currentTimes,
 		currentTimesDNFs,
@@ -36,6 +36,7 @@
 	import StatsWidget from './../components/StatsWidget.svelte';
 	import MatrixChart from '../components/MatrixChart.svelte';
 	import { max } from 'date-fns';
+	import NavBar from '../components/NavBar.svelte';
 
 	let startDate;
 	let endDate;
@@ -55,7 +56,8 @@
 		currentBestAvg5: { time: 0, date: '' },
 		bestWeekDay: { day: '', avg: '', query: [] },
 		bestHour: { hour: '', avg: '', query: [] },
-		mostInDay: { date: '', solves: 0, query: [] }
+		mostInDay: { date: '', solves: 0, query: [] },
+		timeDistribution: []
 	};
 
 	let maxCount = 0;
@@ -282,10 +284,10 @@
 
 		stats.currentBestTime = query(
 			`select time, date ${$generalQuery} and timePb is 1 and penalty is not 2 order by date desc`
-		)[0];
+		)[0] || { time: 0, date: '', query: [] };
 		stats.currentBestTime.query = query(
-			`select ${$puzzle === 'ALL' ? 'puzzle, category, ' : ''} time, date, scramble, penalty, comment ${$generalQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`
-		);
+				`select ${$puzzle === 'ALL' ? 'puzzle, category, ' : ''} time, date, scramble, penalty, comment ${$generalQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`
+		) || [];
 
 		stats.bestWeekDay.day = querySimpleArray(
 			`select strftime('%w', date) ${$generalQuery} group by strftime('%w', date) order by count(*) desc limit 1`
@@ -301,6 +303,8 @@ FROM (
 		stats.bestWeekDay.query = query(
 			`select strftime('%w', date) day, count(*) solves ${$generalQuery} group by strftime('%w', date) order by count(*) desc`
 		);
+
+		console.log(stats.bestWeekDay.query);
 
 		stats.bestHour.hour = querySimpleArray(
 			`select strftime('%H', date) ${$generalQuery} group by strftime('%H', date) order by count(*) desc limit 1`
@@ -324,6 +328,10 @@ FROM (
 			`select strftime('%F', date) as 'date', count(*) solves ${$generalQuery} group by strftime('%F', date) order by count(*) desc limit 5`
 		);
 
+		stats.timeDistribution = query(
+			`select floor(time / 1000) * 1000 as time, count(*) as solves ${$generalQuery} group by floor(time / 1000) * 1000 order by time`
+		);
+
 		matrixData.set(
 			query(
 				`select strftime('%F', date) dat, strftime('%w', date) day, count(*) val ${$generalQuery} and date between date('${$currentEndDate}', '-1 year') and date('${$currentEndDate}', '+1 day') group by strftime('%F', date) order by date`
@@ -344,66 +352,15 @@ FROM (
 
 <main class="w-full">
 	{#if db_loaded}
-		<div class="bg-base-100 mt-2 p-4 px-8 border-neutral flex lg:flex-row flex-col justify-between w-full" >
-			<div class="w-full m-auto lg:m-0">
-				<div class="flex grow-0 space-x-4 items-center justify-center lg:justify-start">
-					<div class="items-center form-control">
-						<label for="puzzlePicker" class="label">
-							<span class="label-text text-lg font-bold mr-2">Puzzle</span>
-							<select
-								id="puzzlePicker"
-								bind:value={$puzzle}
-								selected={$puzzle}
-								on:change={() => {
-									changePuzzle();
-								}}
-								class="select select-primary"
-							>
-								{#each $puzzleOptions as option}
-									<option value={option}>{option}</option>
-								{/each}
-							</select>
-						</label>
-					</div>
-
-					<div class="items-center form-control">
-						<label for="puzzlePicker" class="label">
-							<span class="label-text text-lg font-bold mr-2">Category</span>
-							<select
-								id="categoryPicker"
-								bind:value={$category}
-								selected={$category}
-								on:change={() => {
-									changeCategories();
-								}}
-								class="select select-primary"
-								disabled={$puzzle === 'ALL'}
-							>
-								{#each $categoryOptions as option}
-									<option value={option}>{option}</option>
-								{/each}
-							</select>
-						</label>
-					</div>
-
-					<button
-						type="button"
-						class="btn btn-sm"
-						on:click={() => (showCatMore = true)}
-						disabled={$puzzle === 'ALL'}>...</button
-					>
-				</div>
-			</div>
-
-			<DateRangePicker
-				bind:startDate
-				bind:endDate
-				on:apply={() => {
-					updateWithDate = true;
-					updateAvgs();
-				}}
-			/>
-		</div>
+		<NavBar
+			bind:startDate
+			bind:endDate
+			bind:updateWithDate
+			bind:showCatMore
+			{updateAvgs}
+			on:changeCategories={changeCategories}
+			on:changePuzzle={changePuzzle}
+		/>
 
 		<div style="width: 95%" class="divider h-full p-0 mx-auto my-2 mb-4" />
 
