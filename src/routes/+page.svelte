@@ -287,7 +287,7 @@
 		)[0] || { time: 0, date: '', query: [] };
 		stats.currentBestTime.query = query(
 				`select ${$puzzle === 'ALL' ? 'puzzle, category, ' : ''} time, date, scramble, penalty, comment ${$generalQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`
-		) || [];
+		);
 
 		stats.bestWeekDay.day = querySimpleArray(
 			`select strftime('%w', date) ${$generalQuery} group by strftime('%w', date) order by count(*) desc limit 1`
@@ -303,8 +303,6 @@ FROM (
 		stats.bestWeekDay.query = query(
 			`select strftime('%w', date) day, count(*) solves ${$generalQuery} group by strftime('%w', date) order by count(*) desc`
 		);
-
-		console.log(stats.bestWeekDay.query);
 
 		stats.bestHour.hour = querySimpleArray(
 			`select strftime('%H', date) ${$generalQuery} group by strftime('%H', date) order by count(*) desc limit 1`
@@ -323,7 +321,7 @@ FROM (
 
 		stats.mostInDay = query(
 			`select strftime('%F', date) as 'date', count(*) solves ${$generalQuery} group by strftime('%F', date) order by count(*) desc limit 1`
-		)[0];
+		)[0] || { date: '', solves: 0 };
 		stats.mostInDay.query = query(
 			`select strftime('%F', date) as 'date', count(*) solves ${$generalQuery} group by strftime('%F', date) order by count(*) desc limit 5`
 		);

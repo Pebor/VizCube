@@ -7,19 +7,15 @@
 
 	export let precise = false;
 
+	let timeValue;
+
 	const dispatch = createEventDispatcher();
 
 	function handleClick() {
-		dispatch('apply');
-	}
-
-	function handleSelect(event) {
-		const value = event.target.value;
-		const currentDate = new Date($currentEndDate);
+		const currentDate = new Date();
 		let newStartDate, newEndDate;
-		let noChange = false;
 
-		switch (value) {
+		switch (timeValue) {
 			case '1day':
 				newStartDate = new Date(currentDate);
 				newEndDate = new Date(currentDate);
@@ -60,20 +56,24 @@
 				);
 				newEndDate = new Date(currentDate);
 				break;
-			case 'precise':
-				precise = true;
-				noChange = true;
-				break;
-			case 'all':
-				noChange = true;
-				currentStartDate.set(startDate);
-				currentEndDate.set(endDate);
-				break;
 		}
 
-		if (!noChange) {
+		if (timeValue !== 'all') {
 			currentStartDate.set(newStartDate.toISOString().split('T')[0]);
 			currentEndDate.set(newEndDate.toISOString().split('T')[0]);
+		} else {
+			currentStartDate.set(startDate);
+			currentEndDate.set(endDate);
+		}
+
+		dispatch('apply');
+	}
+
+	function handleSelect() {
+		switch (timeValue) {
+			case 'precise':
+				precise = true;
+				break;
 		}
 	}
 </script>
@@ -92,7 +92,11 @@
 			</div>
 		</div>
 	{:else}
-		<select class="select select-bordered select-md select-secondary" on:change={handleSelect}>
+		<select
+			class="select select-bordered select-md select-secondary"
+			bind:value={timeValue}
+			on:change={handleSelect}
+		>
 			<option value="all">From first</option>
 			<option value="precise">Precise</option>
 			<option value="1day">last 1 day</option>
