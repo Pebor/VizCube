@@ -20,7 +20,7 @@
 	}
 </script>
 
-<div class="relative w-full">
+<div class="p-2 md:p-8 rounded-box border-primary shadow-lg relative w-full">
 	<Bar
 		options={{
 			maintainAspectRatio: false,

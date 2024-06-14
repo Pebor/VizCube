@@ -22,8 +22,8 @@
 
 <div class="flex flex-col">
 
-	<div class="flex mx-16 mb-8">
-		<button class="btn btn-neutral mx-4" on:click={()=> showHelp = true}>help</button>
+	<div class="flex flex-col md:flex-row mx-16 mb-8 items-center gap-2 md:gap-4">
+		<button class="btn btn-neutral w-fit" on:click={()=> showHelp = true}>help</button>
 
 			<textarea
 			class="textarea textarea-bordered w-full"
@@ -34,7 +34,7 @@
 		/>
 
 
-		<button class="btn btn-accent mx-4" on:click={processQuery}>Confirm</button>
+		<button class="btn btn-accent w-fit" on:click={processQuery}>Confirm</button>
 		
 	</div>
 

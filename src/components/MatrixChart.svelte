@@ -178,7 +178,7 @@
 	onMount(() => {});
 </script>
 
-<div class="p-8 rounded-box border-primary shadow-lg relative w-full">
+<div class="p-2 md:p-8 rounded-box border-primary shadow-lg relative w-full">
 	<canvas id="matrix-chart"></canvas>
 </div>
 

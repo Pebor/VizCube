@@ -5,7 +5,7 @@
 	export let data;
 </script>
 
-<div class="relative">
+<div class="relative w-full">
 	<Bar
 		options={{
 			maintainAspectRatio: false,

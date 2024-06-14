@@ -5,7 +5,7 @@
 	export let startDate;
 	export let endDate;
 
-	export let precise = false;
+	export let precise = true;
 
 	let timeValue;
 
@@ -80,7 +80,7 @@
 
 <div class="flex items-center justify-center space-x-4 flex-row">
 	{#if precise}
-		<div class="flex">
+		<div class="flex flex-col sm:flex-row items-center">
 			<div class="form-control">
 				<input type="date" bind:value={$currentStartDate} class="input input-md input-secondary" />
 			</div>
@@ -108,7 +108,7 @@
 		</select>
 	{/if}
 
-	<div class="space-x-2 flex">
+	<div class="gap-2 flex flex-col sm:flex-row">
 		<button class="btn btn-sm btn-success" on:click={handleClick}>Apply</button>
 
 		{#if precise}

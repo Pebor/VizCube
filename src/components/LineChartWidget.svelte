@@ -12,11 +12,11 @@
 	let tension = 0;
 </script>
 
-<div class="p-8 rounded-box border-primary shadow-lg w-max md:w-full items-start">
+<div class="p-2 md:p-8 rounded-box border-primary shadow-lg w-full items-start">
 	<div class="relative">
 		<LineChartBasic bind:spanGaps bind:points bind:pointsSize bind:pointsOnly bind:tension />
 	</div>
-	<div class="flex mt-2">
+	<div class="flex flex-wrap mt-2">
 		<button on:click={() => $mainChart.resetZoom()} class="btn btn-neutral"> Reset zoom </button>
 
 		<label class="label cursor-pointer">

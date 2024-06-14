@@ -52,9 +52,9 @@
 		longest session (od kdy do kdy a kolik)
 		Day with the most solves (zase asi nastavitelné na den, hour, week, month)
 		Den v týdnu kdy nejvíce skládáš -->
-<div class="flex flex-col gap-2 mx-2 lg:mx-16">
+<div class="flex flex-col gap-2 px-2 lg:px-16 w-full">
 	<!--  Stats needs rework, off of daisyui -->
-	<div class="grid grid-cols-4 gap-2 mx-auto">
+	<div class="flex flex-wrap md:grid grid-cols-4 gap-2 w-full ">
 		<div class="stat place-items-center shadow-lg">
 			<div class="stat-title">Total solves</div>
 			<div class="stat-value">{stats.currentSolveCount}</div>
