@@ -1,0 +1,16 @@
+{
+    "name": "VizCube",
+    "short_name": "VizCube",
+    "description": "Visualize your cube solving data a neat, organized and fun way.",
+    "start_url": "/",
+    "display": "fullscreen",
+    "background_color": "#1D232A",
+    "theme_color": "#1D232A",
+    "icons": [
+      {
+        "src": "./coolicon_192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }
+    ]
+  }
