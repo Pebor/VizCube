@@ -74,7 +74,7 @@
 			>
 			<div class="stat-title">{$puzzle === 'ALL' ? 'Latest PB' : 'Best time'}</div>
 			<div class="stat-value">
-				{stats.currentBestTime.time ? formatTime(stats.currentBestTime.time) : 'No overall PB'}
+				{stats.currentBestTime.time ? formatTime(stats.currentBestTime.time, true) : 'No overall PB'}
 			</div>
 			<div class="stat-desc">Set on {stats.currentBestTime.date}</div>
 		</div>

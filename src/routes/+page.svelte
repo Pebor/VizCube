@@ -37,6 +37,7 @@
 	import MatrixChart from '../components/MatrixChart.svelte';
 	import { max } from 'date-fns';
 	import NavBar from '../components/NavBar.svelte';
+	import NewDateRangePicker from '../components/newDateRangePicker.svelte';
 
 	let startDate;
 	let endDate;

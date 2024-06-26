@@ -120,9 +120,19 @@
 						sqrs: 'sq1'
 					};
 
-					const puzzle = puzzleNames[session_data[item]['opt']['scrType']] || '333';
+					const getScrType = (item) => {
+						if (session_data[item]['opt']) {
+							return puzzleNames[session_data[item]['opt']['scrType']];
+						} else if (session_data[item]['scrType']) {
+							return puzzleNames[session_data[item]['scrType']];
+						}
+						return '333';
+					};
+
+					const puzzle = getScrType(item);
 					const category = session_data[item]['name'];
 					const obj = { category, from: 'cstimer', enabled: false };
+
 
 					if (!puzzleCategories[puzzle]) {
 						puzzleCategories[puzzle] = [];
@@ -133,7 +143,15 @@
 
 					data.push(
 						temp_data[`session${item}`].map((it) => {
-							return [puzzle, category, it[0][1], it[3], it[1], 0, it[2]];
+							return [
+								puzzle,     // puzzle
+								category,   // category
+								it[0][1],   // time
+								it[3],      // date
+								it[1],      // scramble
+								it[0][0],   // penalty
+								it[2]       // comment
+							];
 						})
 					);
 				}
@@ -202,10 +220,12 @@
 				if (data[0] !== '') {
 					if (fileTypes[i] === 'twisty') {
 						data[3] = data[3] / 1000; // sqlite unixepoch takes seconds (unix time)
+						data[3] += data[5] == 1 ?  2000 : 0; // +2 penalty
+					} else if (fileTypes[i] === 'cstimer') {
+						data[3] += data[5] == 200 ? 2000 : 0; // +2 penalty
 					}
 
 					data[6] = data[6] === '' ? null : data[6]; // make comments null if empty
-					data[3] = data[5] == 1 ? parseInt(data[3]) + 2000 : data[3]; // +2 penalty
 
 					stmt.run(data);
 				}
@@ -403,4 +423,7 @@
 	<p>You can export your data from the side menu <b>Export/import</b> -> <b>Export</b> -> <b>For backup</b>.</p>
 	<div class="divider"><b>CSTimer</b></div>
 	<p>You can export your data from with <b>Export</b> -> <b>Export to file</b>.</p>
+	<div class="divider"><b>Other timers</b></div>
+	<p>If your timer of choice can export into <b>CSTimer (json)</b> it can be imported here.</p>
+	<p>If that's not the case, but your timer app can export, <b>contact me</b> and I can add a parser.</p>
 </Modal>

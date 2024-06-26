@@ -11,6 +11,9 @@ importers:
       '@beyonk/svelte-datepicker':
         specifier: ^13.0.4
         version: 13.0.4
+      '@svelte-plugins/datepicker':
+        specifier: ^1.0.9
+        version: 1.0.9
       '@sveltejs/adapter-static':
         specifier: ^2.0.3
         version: 2.0.3(@sveltejs/kit@1.30.4(svelte@4.2.18)(vite@4.5.3))
@@ -313,6 +316,9 @@ packages:
 
   '@polka/url@1.0.0-next.25':
     resolution: {integrity: sha512-j7P6Rgr3mmtdkeDGTe0E/aYyWEWVtc5yFXtHCRHs28/jptDEWfaVOc5T7cblqy1XKPPfCxJc/8DwQ5YgLOZOVQ==}
+
+  '@svelte-plugins/datepicker@1.0.9':
+    resolution: {integrity: sha512-HagVB8jLUwNFbwfAcJBNURN1QMQ+qAQQjLJPH97GMqI6auo7jIxOMiSIEWpx7SxTDewHJAlH1izQy3cwBVV8oQ==}
 
   '@sveltejs/adapter-auto@2.1.1':
     resolution: {integrity: sha512-nzi6x/7/3Axh5VKQ8Eed3pYxastxoa06Y/bFhWb7h3Nu+nGRVxKAy3+hBJgmPCwWScy8n0TsstZjSVKfyrIHkg==}
@@ -1504,6 +1510,8 @@ snapshots:
     optional: true
 
   '@polka/url@1.0.0-next.25': {}
+
+  '@svelte-plugins/datepicker@1.0.9': {}
 
   '@sveltejs/adapter-auto@2.1.1(@sveltejs/kit@1.30.4(svelte@4.2.18)(vite@4.5.3))':
     dependencies:
