@@ -122,7 +122,7 @@
 
 					const getScrType = (item) => {
 						if (session_data[item]['opt']) {
-							return puzzleNames[session_data[item]['opt']['scrType']];
+							return puzzleNames[session_data[item]['opt']['scrType'] || '333'];
 						} else if (session_data[item]['scrType']) {
 							return puzzleNames[session_data[item]['scrType']];
 						}
