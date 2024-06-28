@@ -122,7 +122,7 @@
 
 					const getScrType = (item) => {
 						if (session_data[item]['opt']) {
-							return puzzleNames[session_data[item]['opt']['scrType'] || '333'];
+							return puzzleNames[session_data[item]['opt']['scrType']] || '333';
 						} else if (session_data[item]['scrType']) {
 							return puzzleNames[session_data[item]['scrType']];
 						}
@@ -143,6 +143,13 @@
 
 					data.push(
 						temp_data[`session${item}`].map((it) => {
+							console.log(								puzzle,     // puzzle
+								category,   // category
+								it[0][1],   // time
+								it[3],      // date
+								it[1],      // scramble
+								it[0][0],   // penalty
+								it[2]  );
 							return [
 								puzzle,     // puzzle
 								category,   // category
