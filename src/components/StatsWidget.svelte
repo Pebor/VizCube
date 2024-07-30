@@ -8,6 +8,7 @@
 	import Modal from './Modal.svelte';
 	import QueryTable from './QueryTable.svelte';
 	import { formatTable } from '../utils';
+	import AvgPie from './AvgPie.svelte';
 
 	export let stats;
 	export let updateAvgs;
@@ -118,7 +119,10 @@
 	</div>
 	{#if $puzzle !== 'ALL'}
 		<LineChartWidget {updateAvgs} />
-		<AvgDistribution bind:data={stats.timeDistribution} />
+		<div class="flex flex-wrap">
+			<AvgDistribution bind:data={stats.timeDistribution} />
+			<AvgPie bind:data={stats.timeDistribution} />
+		</div>
 	{/if}
 	<MatrixChart {maxCount} />
 </div>

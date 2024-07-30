@@ -287,7 +287,7 @@
 			`select time, date ${$generalQuery} and timePb is 1 and penalty is not 2 order by date desc`
 		)[0] || { time: 0, date: '', query: [] };
 		stats.currentBestTime.query = query(
-				`select ${$puzzle === 'ALL' ? 'puzzle, category, ' : ''} time, date, scramble, penalty, comment ${$generalQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`
+			`select ${$puzzle === 'ALL' ? 'puzzle, category, ' : ''} time, date, scramble, penalty, comment ${$generalQuery} and penalty is not 2 and timePb is 1 order by date desc limit 5`
 		);
 
 		stats.bestWeekDay.day = querySimpleArray(
@@ -298,7 +298,7 @@
 FROM (
     SELECT COUNT(*) AS daily_counts
     ${$generalQuery}
-    GROUP BY strftime('%w', date) 
+    GROUP BY strftime('%w', date)
 );`
 		)[0];
 		stats.bestWeekDay.query = query(
@@ -309,7 +309,7 @@ FROM (
 			`select strftime('%H', date) ${$generalQuery} group by strftime('%H', date) order by count(*) desc limit 1`
 		)[0];
 		stats.bestHour.avg = querySimpleArray(
-			`SELECT AVG(hourly_counts) AS average_count_per_hour 
+			`SELECT AVG(hourly_counts) AS average_count_per_hour
 FROM (
 	SELECT COUNT(*) AS hourly_counts
 	${$generalQuery}
@@ -396,6 +396,8 @@ FROM (
 		{#if advanced}
 			<Advanced />
 		{/if}
+
+
 	{:else}
 		<div class="center">
 			{#if loading && !db_loaded}
@@ -404,7 +406,13 @@ FROM (
 				<ImportFile on:done={handleFileChange} />
 			{/if}
 		</div>
+		<div class="fixed bottom-0 right-0 p-3">
+			<a href="https://github.com/Pebor/VizCube">
+				<img src="github-mark.png" alt="GitHub" width="64" height="64" style="filter: invert(1) opacity(0.15)" />
+			</a>
+		</div>
 	{/if}
+
 </main>
 
 <style>

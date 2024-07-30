@@ -5,9 +5,11 @@
 @tailwind utilities;
 
 body {
-    font-family: 'Inter', sans-serif; 
-  }
+	font-family: 'Inter', sans-serif;
+}
 
-*, *:before, *:after {
-    box-sizing: border-box;
+*,
+*:before,
+*:after {
+	box-sizing: border-box;
 }

@@ -4,10 +4,12 @@
 	import Papa from 'papaparse';
 	import { db } from './../store.js';
 	import { createEventDispatcher } from 'svelte';
+	import { parse } from 'date-fns';
 	const dispatch = createEventDispatcher();
 
 	let files = [];
 	let fileTypes = [];
+	let fileInfo = [];
 	let parsed = [];
 
 	let puzzleCategories = {};
@@ -20,13 +22,26 @@
 
 	let showHelp = false;
 
+	let optionsValue;
+	const possiblePuzzles = [
+		'333',
+		'222',
+		'444',
+		'555',
+		'666',
+		'777',
+		'other',
+		'clock',
+		'mega',
+		'pyra',
+		'skewb',
+		'sq1',
+		'other'
+	];
+
 	function initialImport(event) {
 		files = event.target.files;
 		fileTypes = new Array(files.length).fill('twisty');
-	}
-
-	function setFileType(index, type) {
-		fileTypes[index] = type;
 	}
 
 	async function parseFiles() {
@@ -58,6 +73,34 @@
 									puzzleCategories[puzzle].push(obj);
 								}
 							});
+
+							resolve();
+						}
+					});
+				});
+			} else if (fileTypes[index] === 'twisty_session') {
+				await new Promise((resolve) => {
+					Papa.parse(files[index], {
+						skipEmptyLines: true,
+						complete: function (res) {
+							let types = [];
+							data = res.data;
+
+							const puzzle = fileInfo[index];
+							const category = files[index].name;
+
+							for (let i = 0; i < data.length; i++) {
+								data[i] = [puzzle, category, data[i][0], data[i][2], data[i][1], 0, ''];
+							};
+
+							const obj = { category, from: 'twisty_session', enabled: false };
+
+							if (!puzzleCategories[puzzle]) {
+								puzzleCategories[puzzle] = [];
+							}
+							if (!puzzleCategories[puzzle].some((it) => it.category === category)) {
+								puzzleCategories[puzzle].push(obj);
+							}
 
 							resolve();
 						}
@@ -133,7 +176,6 @@
 					const category = session_data[item]['name'];
 					const obj = { category, from: 'cstimer', enabled: false };
 
-
 					if (!puzzleCategories[puzzle]) {
 						puzzleCategories[puzzle] = [];
 					}
@@ -144,13 +186,13 @@
 					data.push(
 						temp_data[`session${item}`].map((it) => {
 							return [
-								puzzle,     // puzzle
-								category,   // category
-								it[0][1],   // time
-								it[3],      // date
-								it[1],      // scramble
-								it[0][0],   // penalty
-								it[2]       // comment
+								puzzle, // puzzle
+								category, // category
+								it[0][1], // time
+								it[3], // date
+								it[1], // scramble
+								it[0][0], // penalty
+								it[2] // comment
 							];
 						})
 					);
@@ -199,6 +241,7 @@
 		$db.run(createTableQuery);
 
 		// Insert data into the table
+		// puzzle, category, time, date, scramble, penalty, comment, avg5, avg12, avg50, avg100, avg1000, timePb, avg5Pb, avg12Pb, avg50Pb, avg100Pb, avg1000Pb
 		const insertDataQuery = `INSERT INTO solutions VALUES (?, ?, ?, datetime(?, 'unixepoch'), ?, ?, ?, null, null, null, null, null, null, null, null, null, null, null)`;
 		const stmt = $db.prepare(insertDataQuery);
 
@@ -220,9 +263,25 @@
 				if (data[0] !== '') {
 					if (fileTypes[i] === 'twisty') {
 						data[3] = data[3] / 1000; // sqlite unixepoch takes seconds (unix time)
-						data[3] += data[5] == 1 ?  2000 : 0; // +2 penalty
+						if (data[5] == 1) data[2] = (parseInt(data[2]) + 2000).toString(); // +2 penalty
+					} else if (fileTypes[i] === 'twisty_session') {
+						function convertToMilliseconds(time) {
+							if(time.includes(':')) { 
+								const [minutes, secondsAndMilliseconds] = time.split(':');
+								const [seconds, milliseconds] = secondsAndMilliseconds.split('.');
+								const totalMilliseconds = parseInt(minutes) * 60 * 1000 + parseInt(seconds) * 1000 + parseInt(milliseconds);
+								return totalMilliseconds;
+							} else {
+								const [seconds, milliseconds] = time.split('.');
+								const totalMilliseconds = parseInt(seconds) * 1000 + parseInt(milliseconds);
+								return totalMilliseconds;
+							}
+						}
+						data[2] = convertToMilliseconds(data[2]);
+						data[3] = Math.floor(new Date(data[3]).getTime() / 1000);
+
 					} else if (fileTypes[i] === 'cstimer') {
-						data[3] += data[5] == 200 ? 2000 : 0; // +2 penalty
+						data[2] += data[5] == 200 ? 2000 : 0; // +2 penalty
 					}
 
 					data[6] = data[6] === '' ? null : data[6]; // make comments null if empty
@@ -316,12 +375,12 @@
 		id="fileInput"
 		class="file-input"
 	/>
-	<button class="btn btn-info btn-sm absolute -right-5 -top-5" on:click={()=> showHelp = true}>info</button>
+	<button class="btn btn-info btn-sm absolute -right-5 -top-5" on:click={() => (showHelp = true)}
+		>info</button
+	>
 </div>
 
-
 <Modal bind:showModal bind:next on:clickNext={changeState} on:clickDone={() => dispatch('done')}>
-
 	{#if state === 0}
 		<h1 class="text-xl mb-8 text-neutral-content font-bold">Select file types</h1>
 		{#each files as file, index}
@@ -329,11 +388,26 @@
 				<label class="label cursor-pointer">
 					<!-- svelte-ignore a11y-label-has-associated-control -->
 					<span class="label-text text-neutral-content text-md">{file.name}</span>
+					{#if optionsValue === 'twisty_session'}
+						<select
+							class="select select-bordered ml-4"
+							on:change={(e) => (fileInfo[index] = e.target.value)}
+						>
+							{#each possiblePuzzles as p}
+								<option value={p}>{p}</option>
+							{/each}
+						</select>
+					{/if}
 					<select
 						class="select select-bordered ml-4"
-						on:change={(e) => setFileType(index, e.target.value)}
+						on:change={(e) => {
+							fileTypes[index] = e.target.value;
+							fileInfo[index] = '333';
+						}}
+						bind:value={optionsValue}
 					>
 						<option value="twisty">Twisty Timer</option>
+						<option value="twisty_session">Twisty Timer (singular)</option>
 						<option value="cstimer">CSTimer</option>
 					</select>
 				</label>
@@ -406,11 +480,16 @@
 		{:catch error}
 			<p>{error.message}</p>
 		{/await}
-		{:else if state === 2}
+	{:else if state === 2}
 		<h1 class="text-xl mb-8 text-neutral-content font-bold">Importing</h1>
 		<p>Database has been created <b>succesfully</b>.</p>
-		<p>Next section might take a while, as it has to calculate averages. This depends on your device</p>
-		<p>If it takes too long, check the developer console for any errors. If errors are present it's an please file an issue.</p>
+		<p>
+			Next section might take a while, as it has to calculate averages. This depends on your device
+		</p>
+		<p>
+			If it takes too long, check the developer console for any errors. If errors are present it's
+			an please file an issue.
+		</p>
 	{/if}
 </Modal>
 
@@ -420,10 +499,20 @@
 	<p>Currently, VizCube supports <b>Twisty Timer</b> and <b>CSTimer</b>.</p>
 	<p>It is expected that you import an export of a <b>backup</b>.</p>
 	<div class="divider"><b>Twisty Timer</b></div>
-	<p>You can export your data from the side menu <b>Export/import</b> -> <b>Export</b> -> <b>For backup</b>.</p>
+	<p>
+		You can export your data from the side menu <b>Export/import</b> -> <b>Export</b> ->
+		<b>For backup</b>.
+	</p>
+	<div class="divider"><b>Twisty timer (singular)</b></div>
+	<p>
+		You can export a singular category by going to the side menu <b>Export/import</b> -> <b>Export</b> ->
+		<b>For other timers</b>.
+	</p>
 	<div class="divider"><b>CSTimer</b></div>
 	<p>You can export your data from with <b>Export</b> -> <b>Export to file</b>.</p>
 	<div class="divider"><b>Other timers</b></div>
 	<p>If your timer of choice can export into <b>CSTimer (json)</b> it can be imported here.</p>
-	<p>If that's not the case, but your timer app can export, <b>contact me</b> and I can add a parser.</p>
+	<p>
+		If that's not the case, but your timer app can export, <b>contact me</b> and I can add a parser.
+	</p>
 </Modal>
