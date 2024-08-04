@@ -22,9 +22,9 @@ onmessage = function (event) {
 	let sum = 0,
 		lowest = Infinity;
 	let pb = false;
-	let lowerIndex = Math.ceil(numElements * 0.1);
-	let upperIndex = Math.floor(numElements * 0.9);
-	let diff = upperIndex - lowerIndex;
+	const lowerIndex = Math.ceil(numElements * 0.05);
+	const upperIndex = Math.floor(numElements * 0.95);
+	const diff = upperIndex - lowerIndex;
 
 	toWindows(timeValues, numElements).forEach((ar) => {
 		ar.sort((a, b) => a - b);
